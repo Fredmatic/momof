@@ -1,9 +1,11 @@
 {
   "name": "my-website",
   "version": "1.0.0",
-  "description": "",
-  "main": "script.js",
+  "description": "MOMO's PALOR - beauty salon booking website (Express backend + static frontend)",
+  "main": "server/index.js",
   "scripts": {
+    "start": "node server/index.js",
+    "dev": "nodemon server/index.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
@@ -11,9 +13,14 @@
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
+    "@supabase/supabase-js": "^2.45.4",
     "bcrypt": "^6.0.0",
     "cors": "^2.8.6",
+    "dotenv": "^16.4.5",
     "express": "^5.2.1",
     "express-session": "^1.19.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.7"
   }
 }

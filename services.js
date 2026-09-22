@@ -66,7 +66,7 @@ bookingForm.addEventListener("submit", function (event) {
     const bookingReference =
         "MP-" + Math.floor(10000 + Math.random() * 90000);
 
-    fetch("http://localhost:3000/bookings", {
+    fetch("/bookings", {
         method: "POST",
 
         headers: {
@@ -134,23 +134,20 @@ checkBooking.addEventListener("click", function () {
 
     const reference = statusReference.value.trim().toUpperCase();
 
-    fetch("http://localhost:3000/bookings")
-        .then(response => response.json())
+    fetch(`/bookings/status/${reference}`)
+        .then(response => {
 
-        .then(data => {
-
-            const booking = data.find(
-                booking => booking.reference === reference
-            );
-
-            if (!booking) {
-
-                bookingResult.innerHTML = `
-                    <p>Booking not found. Please check your reference.</p>
-                `;
-
-                return;
+            if (!response.ok) {
+                return response.json().then(error => {
+                    throw new Error(error.message);
+                });
             }
+
+            return response.json();
+
+        })
+
+        .then(booking => {
 
             bookingResult.innerHTML = `
                 <div class="booking-card">
@@ -182,7 +179,7 @@ checkBooking.addEventListener("click", function () {
             console.error("Error:", error);
 
             bookingResult.innerHTML = `
-                <p>Unable to check booking. Please try again.</p>
+                <p>${error.message || "Unable to check booking. Please try again."}</p>
             `;
 
         });

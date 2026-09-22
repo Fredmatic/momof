@@ -1,4 +1,4 @@
-fetch("http://127.0.0.1:3000/check-login", {
+fetch("/check-login", {
     credentials: "include"
 })
     .then(response => {
@@ -96,7 +96,7 @@ function showBookings(bookings) {
         // CONFIRM BOOKING
         confirmButton.addEventListener("click", function () {
 
-            fetch(`http://127.0.0.1:3000/bookings/${booking.reference}`, {
+            fetch(`/bookings/${booking.reference}`, {
                 method: "PATCH",
                 credentials: "include",
 
@@ -130,7 +130,7 @@ function showBookings(bookings) {
         // COMPLETE BOOKING
         completeButton.addEventListener("click", function () {
 
-            fetch(`http://127.0.0.1:3000/bookings/${booking.reference}`, {
+            fetch(`/bookings/${booking.reference}`, {
                 method: "PATCH",
                 credentials: "include",
 
@@ -167,7 +167,7 @@ function showBookings(bookings) {
         // CANCEL BOOKING
         cancelButton.addEventListener("click", function () {
 
-            fetch(`http://127.0.0.1:3000/bookings/${booking.reference}`, {
+            fetch(`/bookings/${booking.reference}`, {
                 method: "PATCH",
                 credentials: "include",
 
@@ -308,7 +308,7 @@ function showCustomerHistory(bookings) {
 
 function loadBookings() {
 
-    fetch("http://127.0.0.1:3000/bookings", {
+    fetch("/bookings", {
         credentials: "include"
     })
 
@@ -361,7 +361,7 @@ function loadBookings() {
 
 //     const searchText = bookingSearch.value.toLowerCase();
 
-//     fetch("http://127.0.0.1:3000/bookings")
+//     fetch("/bookings")
 //         .then(response => response.json())
 //         .then(data => {
 
@@ -379,7 +379,7 @@ function loadBookings() {
 
 //     const selectedStatus = statusFilter.value;
 
-//     fetch("http://127.0.0.1:3000/bookings")
+//     fetch("/bookings")
 //         .then(response => response.json())
 //         .then(data => {
 
@@ -406,7 +406,7 @@ function startAdminDashboard() {
 
         const searchText = bookingSearch.value.toLowerCase();
 
-        fetch("http://127.0.0.1:3000/bookings", {
+        fetch("/bookings", {
             credentials: "include"
         })
             .then(response => response.json())
@@ -427,7 +427,7 @@ function startAdminDashboard() {
 
         const selectedStatus = statusFilter.value;
 
-        fetch("http://127.0.0.1:3000/bookings", {
+        fetch("/bookings", {
             credentials: "include"
         })
             .then(response => response.json())

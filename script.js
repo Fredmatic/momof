@@ -13,7 +13,7 @@ if (loginForm) {
         const username = userNameInput.value.trim();
         const password = passwordInput.value;
 
-        fetch("http://127.0.0.1:3000/login", {
+        fetch("/login", {
             method: "POST",
             credentials: "include",
 
@@ -71,7 +71,7 @@ if (logout) {
 
     logout.addEventListener("click", function () {
 
-        fetch("http://127.0.0.1:3000/logout", {
+        fetch("/logout", {
             method: "POST",
             credentials: "include"
         })
@@ -97,7 +97,7 @@ if (
     currentPage.includes("contact.html")
 ) {
 
-    fetch("http://127.0.0.1:3000/check-login", {
+    fetch("/check-login", {
         credentials: "include"
     })
         .then(response => {
@@ -137,7 +137,7 @@ if (registerForm) {
 
         event.preventDefault();
 
-        fetch("http://127.0.0.1:3000/register", {
+        fetch("/register", {
             method: "POST",
 
             headers: {

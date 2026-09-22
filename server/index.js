@@ -1,26 +1,46 @@
+require("dotenv").config();
+
+const path = require("path");
 const express = require("express");
 const cors = require("cors");
 const session = require("express-session");
 const bcrypt = require("bcrypt");
+const supabase = require("./supabaseClient");
 
 const app = express();
 
-const bookings = [];
-
-const users = [];
+const PORT = process.env.PORT || 3000;
+const SESSION_SECRET = process.env.SESSION_SECRET || "momo-beauty-secret";
+// Comma-separated list of allowed origins, e.g. "http://127.0.0.1:5500,http://localhost:5500"
+const CLIENT_ORIGINS = (process.env.CLIENT_ORIGIN || "http://127.0.0.1:5500,http://localhost:5500")
+    .split(",")
+    .map(origin => origin.trim());
 
 app.use(cors({
-    origin: "http://127.0.0.1:5500",
+    origin: CLIENT_ORIGINS,
     credentials: true
 }));
 
 app.use(express.json());
 
+app.set("trust proxy", 1); // needed so secure cookies work correctly on Render
+
 app.use(session({
-    secret: "momo-beauty-secret",
+    secret: SESSION_SECRET,
     resave: false,
-    saveUninitialized: false
+    saveUninitialized: false,
+    cookie: {
+        // Render (and most hosts) serve your app over https, so secure
+        // cookies should be on in production and off for local http testing.
+        secure: process.env.NODE_ENV === "production"
+    }
 }));
+
+// Serve the frontend (HTML/CSS/JS/images) directly from this same server,
+// so you can open http://localhost:3000 and get the whole site without
+// running a separate static server.
+app.use(express.static(path.join(__dirname, "..")));
+
 function requireLogin(req, res, next) {
 
     if (!req.session.user) {
@@ -42,144 +62,235 @@ function requireAdmin(req, res, next) {
     next();
 }
 
-app.get("/", (req, res) => {
+// Simple health-check endpoint (the "/" route itself is now served by
+// express.static above, which returns index.html).
+app.get("/api/status", (req, res) => {
     res.send("MOMO's PALOR server is running!");
 });
-app.post("/bookings", (req, res) => {
+
+app.post("/bookings", async (req, res) => {
 
     const booking = req.body;
 
-    const existingBooking = bookings.find(existingBooking =>
-        existingBooking.service === booking.service &&
-        existingBooking.date === booking.date &&
-        existingBooking.time === booking.time &&
-        existingBooking.status !== "cancelled"
-    );
+    try {
 
-    if (existingBooking) {
+        const { data: existingBooking, error: findError } = await supabase
+            .from("bookings")
+            .select("id")
+            .eq("service", booking.service)
+            .eq("date", booking.date)
+            .eq("time", booking.time)
+            .neq("status", "cancelled")
+            .maybeSingle();
 
-        return res.status(409).json({
-            message: "This time slot is already booked."
+        if (findError) throw findError;
+
+        if (existingBooking) {
+            return res.status(409).json({
+                message: "This time slot is already booked."
+            });
+        }
+
+        const { error: insertError } = await supabase
+            .from("bookings")
+            .insert({
+                reference: booking.reference,
+                service: booking.service,
+                price: booking.price,
+                date: booking.date,
+                time: booking.time,
+                name: booking.name,
+                phone: booking.phone,
+                status: booking.status || "pending"
+            });
+
+        if (insertError) throw insertError;
+
+        console.log("New booking received:", booking.reference);
+
+        res.json({
+            message: "Booking received successfully"
         });
 
+    } catch (error) {
+        console.error("Error creating booking:", error.message);
+        res.status(500).json({
+            message: "Something went wrong while creating the booking."
+        });
     }
 
-    bookings.push(booking);
+});
 
-    console.log("New booking received:");
-    console.log(booking);
+// Admin-only: full bookings list for the dashboard.
+app.get("/bookings", requireAdmin, async (req, res) => {
 
-    res.json({
-        message: "Booking received successfully"
-    });
+    const { data, error } = await supabase
+        .from("bookings")
+        .select("*")
+        .order("created_at", { ascending: false });
+
+    if (error) {
+        console.error("Error fetching bookings:", error.message);
+        return res.status(500).json({ message: "Could not load bookings." });
+    }
+
+    res.json(data);
 
 });
 
-app.get("/bookings", requireAdmin, (req, res) => {
-    res.json(bookings);
+// Public: look up a single booking by its reference (used by the
+// "check your booking status" box on the services page). This intentionally
+// does NOT require login, but only ever returns the one matching booking,
+// never the full list.
+app.get("/bookings/status/:reference", async (req, res) => {
+
+    const { data, error } = await supabase
+        .from("bookings")
+        .select("*")
+        .eq("reference", req.params.reference.toUpperCase())
+        .maybeSingle();
+
+    if (error) {
+        console.error("Error looking up booking:", error.message);
+        return res.status(500).json({ message: "Could not look up that booking." });
+    }
+
+    if (!data) {
+        return res.status(404).json({ message: "Booking not found." });
+    }
+
+    res.json(data);
+
 });
-app.patch("/bookings/:reference", requireAdmin, (req, res) => {
+
+app.patch("/bookings/:reference", requireAdmin, async (req, res) => {
 
     const reference = req.params.reference;
     const newStatus = req.body.status;
 
-    const booking = bookings.find(
-        booking => booking.reference === reference
-    );
+    const { data, error } = await supabase
+        .from("bookings")
+        .update({ status: newStatus })
+        .eq("reference", reference)
+        .select()
+        .maybeSingle();
 
-    if (!booking) {
+    if (error) {
+        console.error("Error updating booking:", error.message);
+        return res.status(500).json({ message: "Could not update booking." });
+    }
+
+    if (!data) {
         return res.status(404).json({
             message: "Booking not found"
         });
     }
 
-    booking.status = newStatus;
-
     res.json({
         message: "Booking status updated",
-        booking: booking
+        booking: data
     });
 
 });
+
 app.post("/register", async (req, res) => {
 
     const { username, password } = req.body;
 
-    const existingUser = users.find(user =>
-        user.username === username
-    );
+    try {
 
-    if (existingUser) {
-        return res.status(409).json({
-            message: "Username already exists."
+        const { data: existingUser, error: findError } = await supabase
+            .from("users")
+            .select("id")
+            .eq("username", username)
+            .maybeSingle();
+
+        if (findError) throw findError;
+
+        if (existingUser) {
+            return res.status(409).json({
+                message: "Username already exists."
+            });
+        }
+
+        const hashedPassword = await bcrypt.hash(password, 10);
+
+        const { data: newUser, error: insertError } = await supabase
+            .from("users")
+            .insert({
+                username: username,
+                password: hashedPassword,
+                role: "customer"
+            })
+            .select()
+            .single();
+
+        if (insertError) throw insertError;
+
+        req.session.user = {
+            username: newUser.username,
+            role: newUser.role
+        };
+
+        res.json({
+            message: "Account created successfully.",
+            username: newUser.username,
+            role: newUser.role
         });
+
+    } catch (error) {
+        console.error("Error registering user:", error.message);
+        res.status(500).json({ message: "Something went wrong while creating the account." });
     }
 
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    const newUser = {
-        username: username,
-        password: hashedPassword,
-        role: "customer"
-    };
-
-    users.push(newUser);
-
-    req.session.user = {
-        username: newUser.username,
-        role: newUser.role
-    };
-
-    res.json({
-        message: "Account created successfully.",
-        username: newUser.username,
-        role: newUser.role
-    });
-
 });
+
 app.post("/login", async (req, res) => {
 
     const { username, password } = req.body;
 
-    const user = users.find(user =>
-        user.username === username
-    );
+    try {
 
-    if (!user) {
-        return res.status(401).json({
-            message: "Invalid username or password."
+        const { data: user, error } = await supabase
+            .from("users")
+            .select("*")
+            .eq("username", username)
+            .maybeSingle();
+
+        if (error) throw error;
+
+        if (!user) {
+            return res.status(401).json({
+                message: "Invalid username or password."
+            });
+        }
+
+        const passwordMatch = await bcrypt.compare(password, user.password);
+
+        if (!passwordMatch) {
+            return res.status(401).json({
+                message: "Invalid username or password."
+            });
+        }
+
+        req.session.user = {
+            username: user.username,
+            role: user.role
+        };
+
+        res.json({
+            message: "Login successful",
+            username: user.username,
+            role: user.role
         });
+
+    } catch (error) {
+        console.error("Error logging in:", error.message);
+        res.status(500).json({ message: "Something went wrong while logging in." });
     }
-
-    const passwordMatch = await bcrypt.compare(
-        password,
-        user.password
-    );
-
-    if (!passwordMatch) {
-        return res.status(401).json({
-            message: "Invalid username or password."
-        });
-    }
-
-    if (!user) {
-        return res.status(401).json({
-            message: "Invalid username or password."
-        });
-    }
-
-    req.session.user = {
-        username: user.username,
-        role: user.role
-    };
-
-    res.json({
-        message: "Login successful",
-        username: user.username,
-        role: user.role
-    });
 
 });
+
 app.get("/check-login", (req, res) => {
 
     if (!req.session.user) {
@@ -195,6 +306,7 @@ app.get("/check-login", (req, res) => {
     });
 
 });
+
 app.post("/logout", (req, res) => {
 
     req.session.destroy((error) => {
@@ -212,35 +324,50 @@ app.post("/logout", (req, res) => {
     });
 
 });
+
 app.post("/create-admin", async (req, res) => {
 
     const { username, password } = req.body;
 
-    const existingAdmin = users.find(user =>
-        user.role === "admin"
-    );
+    try {
 
-    if (existingAdmin) {
-        return res.status(403).json({
-            message: "An admin account already exists."
+        const { data: existingAdmin, error: findError } = await supabase
+            .from("users")
+            .select("id")
+            .eq("role", "admin")
+            .maybeSingle();
+
+        if (findError) throw findError;
+
+        if (existingAdmin) {
+            return res.status(403).json({
+                message: "An admin account already exists."
+            });
+        }
+
+        const hashedPassword = await bcrypt.hash(password, 10);
+
+        const { error: insertError } = await supabase
+            .from("users")
+            .insert({
+                username: username,
+                password: hashedPassword,
+                role: "admin"
+            });
+
+        if (insertError) throw insertError;
+
+        res.json({
+            message: "Admin account created successfully."
         });
+
+    } catch (error) {
+        console.error("Error creating admin:", error.message);
+        res.status(500).json({ message: "Something went wrong while creating the admin account." });
     }
 
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    const admin = {
-        username: username,
-        password: hashedPassword,
-        role: "admin"
-    };
-
-    users.push(admin);
-
-    res.json({
-        message: "Admin account created successfully."
-    });
-
 });
-app.listen(3000, () => {
-    console.log("Server is running on port 3000");
+
+app.listen(PORT, () => {
+    console.log(`Server is running on http://localhost:${PORT}`);
 });
