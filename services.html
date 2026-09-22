@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Services - Momo's Palor</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+
+<body>
+
+    <header class="header">
+
+        <div class="logo">
+            <img src="images/momob.png" alt="Momo' Palor logo" width="100px" height="100px">
+            <h2>MOMO's PALOR</h2>
+        </div>
+
+        <nav class="navbar">
+            <a href="home.html">Home</a>
+            <a href="services.html" class="active">Services</a>
+            <a href="#">Products</a>
+            <a href="#">Contact</a>
+        </nav>
+
+        <button id="logout">
+            <i class="fas fa-right-from-bracket"></i> Logout
+        </button>
+
+    </header>
+
+    <section class="services-page">
+
+        <div class="section-title">
+            <h1>Our Services</h1>
+            <p>Professional beauty and care services designed for you.</p>
+        </div>
+
+        <div class="service-container">
+
+            <div class="service-card">
+                <i class="fas fa-scissors"></i>
+                <h3>Hair Styling</h3>
+                <p>Professional hair styling and beauty treatments.</p>
+                <button data-service="Hair-styling" data-price="50000">Book Service</button>
+            </div>
+
+            <div class="service-card">
+                <i class="fas fa-hand-sparkles"></i>
+                <h3>Nail Care</h3>
+                <p>Beautiful nail care and styling for every occasion.</p>
+                <button data-service="Nail Care" data-price="30000">Book Service</button>
+            </div>
+
+            <div class="service-card">
+                <i class="fas fa-paintbrush"></i>
+                <h3>Makeup</h3>
+                <p>Enhance your natural beauty with our makeup services.</p>
+                <button data-service="Makeup" data-price="80000">Book Service</button>
+            </div>
+
+            <div class="service-card">
+                <i class="fas fa-spa"></i>
+                <h3>Skin Care</h3>
+                <p>Relax and care for your skin with our beauty treatments.</p>
+                <button data-service="Skin Care" data-price="40000">Book Service</button>
+            </div>
+
+        </div>
+
+    </section>
+    <div class="booking-modal" id="bookingModal">
+
+        <div class="booking-box">
+
+            <button class="close-booking" id="closeBooking">
+                &times;
+            </button>
+
+            <h2>Book Your Service</h2>
+
+            <p id="selectedService"></p>
+
+            <form id="bookingForm">
+
+                <input type="date" id="bookingDate" required>
+
+                <input type="time" id="bookingTime" min="08:00" max="18:00" required>
+
+                <input type="text" id="customerName" placeholder="Your Name" required>
+
+                <input type="tel" id="customerPhone" placeholder="Phone Number" required>
+
+                <button type="submit">Confirm Booking</button>
+
+            </form>
+
+            <div class="booking-confirmation" id="bookingConfirmation">
+                <i class="fas fa-circle-check"></i>
+                <h2>Booking Confirmed!</h2>
+                <p id="confirmationDetails"></p>
+                <button id="newBooking">Book Another Service</button>
+            </div>
+        </div>
+
+    </div>
+    <section class="booking-status-section">
+
+        <h2>Check Your Booking</h2>
+
+        <p>Enter your booking reference to check your booking status.</p>
+
+        <div class="status-search">
+
+            <input type="text" id="statusReference" placeholder="Enter booking reference">
+
+            <button id="checkBooking">
+                Check Booking
+            </button>
+
+        </div>
+
+        <div id="bookingResult"></div>
+
+    </section>
+
+
+    <script src="services.js"></script>
+
+</body>
+
+</html>

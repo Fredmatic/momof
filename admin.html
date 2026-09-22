@@ -1,0 +1,112 @@
+```html
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Admin Dashboard - Momo's Palor</title>
+
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+
+    <header class="header">
+
+        <div class="logo">
+            <img src="images/momob.png" alt="Momo's Palor logo" width="100px" height="100px">
+
+            <h2>MOMO'S PALOR</h2>
+        </div>
+
+        <h2 class="title">Admin Dashboard</h2>
+
+    </header>
+
+
+    <main class="admin-page">
+
+        <h1>Bookings</h1>
+        <button id="refreshBookings" type="button">
+            Refresh Bookings
+        </button>
+
+
+        <!-- Search bookings -->
+
+        <div class="booking-search">
+
+            <input type="text" id="bookingSearch" placeholder="Search by name or reference...">
+
+        </div>
+
+        <div class="booking-filter">
+            <select id="statusFilter">
+                <option value="all">All Bookings</option>
+                <option value="pending">Pending</option>
+                <option value="confirmed">Confirmed</option>
+                <option value="completed">Completed</option>
+                <option value="cancelled">Cancelled</option>
+            </select>
+        </div>
+
+
+        <!-- Booking statistics -->
+
+        <div class="booking-stats">
+
+            <div class="stat-card">
+                <h3>Total</h3>
+                <p id="totalBookings">0</p>
+            </div>
+
+            <div class="stat-card">
+                <h3>Pending</h3>
+                <p id="pendingBookings">0</p>
+            </div>
+
+            <div class="stat-card">
+                <h3>Confirmed</h3>
+                <p id="confirmedBookings">0</p>
+            </div>
+
+            <div class="stat-card">
+                <h3>Completed</h3>
+                <p id="completedBookings">0</p>
+            </div>
+
+            <div class="stat-card">
+                <h3>Cancelled</h3>
+                <p id="cancelledBookings">0</p>
+            </div>
+
+        </div>
+
+
+
+        <!-- Bookings will be created here by JavaScript -->
+
+        <div id="bookingsList"></div>
+
+        <section class="customers-page">
+            <h1>Customers</h1>
+
+            <div id="customersList"></div>
+        </section>
+
+        <section class="customer-history">
+            <h1>Customer Booking History</h1>
+
+            <div id="customerHistoryList"></div>
+        </section>
+
+    </main>
+
+
+    <script src="admin.js"></script>
+
+</body>
+
+</html>
