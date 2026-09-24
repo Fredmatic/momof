@@ -65,29 +65,6 @@ if (loginForm) {
 }
 
 
-const logout = document.getElementById("logout");
-
-if (logout) {
-
-    logout.addEventListener("click", function () {
-
-        fetch("/logout", {
-            method: "POST",
-            credentials: "include"
-        })
-            .then(response => response.json())
-            .then(data => {
-
-                console.log(data.message);
-
-                window.location.href = "index.html";
-
-            });
-
-    });
-
-}
-
 const currentPage = window.location.pathname;
 
 if (
