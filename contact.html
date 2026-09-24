@@ -7,6 +7,7 @@
     <title>Contact - MOMO's PALOR</title>
     <link rel="stylesheet" href="styles.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 </head>
 
 <body>
@@ -63,6 +64,28 @@
 
         </div>
 
+        <section class="find-us">
+            <h2>Getting Here</h2>
+            <p class="find-intro">See how far you are from us, and get directions.</p>
+
+            <div class="find-controls">
+                <button id="locateBtn" type="button"><i class="fas fa-location-crosshairs"></i> Show my
+                    distance</button>
+                <a id="directionsBtn" class="directions-btn" href="#" target="_blank" rel="noopener">
+                    <i class="fas fa-route"></i> Get directions
+                </a>
+            </div>
+
+            <div class="distance-info" aria-live="polite">
+                <p id="distanceMain">Tap "Show my distance" to see how far you are from us.</p>
+                <p id="distanceNote"></p>
+            </div>
+
+            <div id="map" class="salon-map"></div>
+
+            <p class="find-note">Your location stays in your browser. We never receive or store it.</p>
+        </section>
+
     </main>
 
     <footer class="footer">
@@ -111,6 +134,8 @@
 
     <script src="logout.js"></script>
     <script src="script.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+    <script src="contact.js"></script>
 </body>
 
 </html>

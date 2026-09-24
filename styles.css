@@ -1264,3 +1264,114 @@ body {
         max-width: 320px;
     }
 }
+
+/* ---------- Getting Here (map + distance) ---------- */
+.find-us {
+    max-width: 900px;
+    margin: 60px auto 0;
+}
+
+.find-us h2 {
+    color: #ffaf1f;
+    font-size: 32px;
+    margin-bottom: 8px;
+}
+
+.find-intro {
+    color: #ddd;
+    margin-bottom: 25px;
+}
+
+.find-controls {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+}
+
+#locateBtn,
+.directions-btn {
+    display: inline-block;
+    padding: 12px 24px;
+    border: 2px solid #ffaf1f;
+    border-radius: 25px;
+    font-size: 15px;
+    font-weight: bold;
+    text-decoration: none;
+    cursor: pointer;
+    transition: 0.3s;
+}
+
+#locateBtn {
+    background: #ffaf1f;
+    color: #111;
+}
+
+#locateBtn:hover {
+    background: transparent;
+    color: #ffaf1f;
+}
+
+.directions-btn {
+    background: transparent;
+    color: #ffaf1f;
+}
+
+.directions-btn:hover {
+    background: #ffaf1f;
+    color: #111;
+}
+
+.distance-info {
+    padding: 18px;
+    margin-bottom: 20px;
+    background: rgba(0, 0, 0, 0.55);
+    border: 1px solid rgba(255, 175, 31, 0.5);
+    border-radius: 15px;
+}
+
+#distanceMain {
+    color: #fff;
+    font-size: 22px;
+    font-weight: bold;
+}
+
+#distanceNote {
+    color: #ddd;
+    margin-top: 6px;
+    min-height: 1.2em;
+}
+
+.salon-map {
+    position: relative;
+    z-index: 0;
+    /* keeps the map's internal layers from covering the page */
+    width: 100%;
+    height: 380px;
+    border: 1px solid rgba(255, 175, 31, 0.5);
+    border-radius: 20px;
+    overflow: hidden;
+    color: #ddd;
+    background: rgba(0, 0, 0, 0.55);
+}
+
+.find-note {
+    margin-top: 12px;
+    color: #aaa;
+    font-size: 13px;
+}
+
+@media (max-width: 768px) {
+    .find-us {
+        margin-top: 40px;
+    }
+
+    .salon-map {
+        height: 300px;
+    }
+
+    #distanceMain {
+        font-size: 19px;
+    }
+}
