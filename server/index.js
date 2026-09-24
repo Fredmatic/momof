@@ -163,6 +163,35 @@ app.get("/bookings/status/:reference", async (req, res) => {
 
 });
 
+// Public: which times are already taken for a service on a given date?
+// Only the times are returned (never names or phone numbers), so it is
+// safe to leave open. The booking form uses it to grey out taken slots.
+app.get("/bookings/availability", async (req, res) => {
+
+    const { service, date } = req.query;
+
+    if (!service || !/^\d{4}-\d{2}-\d{2}$/.test(date || "")) {
+        return res.status(400).json({
+            message: "A service and a date (YYYY-MM-DD) are required."
+        });
+    }
+
+    const { data, error } = await supabase
+        .from("bookings")
+        .select("time")
+        .eq("service", service)
+        .eq("date", date)
+        .neq("status", "cancelled");
+
+    if (error) {
+        console.error("Error checking availability:", error.message);
+        return res.status(500).json({ message: "Could not check availability." });
+    }
+
+    res.json({ bookedTimes: data.map(booking => booking.time) });
+
+});
+
 app.patch("/bookings/:reference", requireAdmin, async (req, res) => {
 
     const reference = req.params.reference;

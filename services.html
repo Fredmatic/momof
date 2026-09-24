@@ -22,7 +22,7 @@
             <a href="home.html">Home</a>
             <a href="services.html" class="active">Services</a>
             <a href="#">Products</a>
-            <a href="#">Contact</a>
+            <a href="contact.html">Contact</a>
         </nav>
 
         <button id="logout">
@@ -87,7 +87,9 @@
 
                 <input type="date" id="bookingDate" required>
 
-                <input type="time" id="bookingTime" min="08:00" max="18:00" required>
+                <select id="bookingTime" required>
+                    <option value="">Choose a date first</option>
+                </select>
 
                 <input type="text" id="customerName" placeholder="Your Name" required>
 
@@ -127,6 +129,7 @@
     </section>
 
 
+    <script src="script.js"></script>
     <script src="logout.js"></script>
     <script src="services.js"></script>
 

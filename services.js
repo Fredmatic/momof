@@ -14,6 +14,7 @@ serviceButtons.forEach(button => {
         selectedService.textContent = selectedServiceName + " - UGX " + selectedServicePrice;
 
         bookingModal.style.display = "flex";
+        loadTimeSlots();
     })
 })
 closeBooking.addEventListener("click", function () {
@@ -31,9 +32,82 @@ const newBooking = document.getElementById("newBooking")
 const bookingForm = document.getElementById("bookingForm")
 const bookingDateInput = document.getElementById("bookingDate");
 
-const today = new Date().toISOString().split("T")[0];
+// en-CA formats as YYYY-MM-DD in the visitor's local time zone
+const today = new Date().toLocaleDateString("en-CA");
 
 bookingDateInput.min = today;
+
+// ---------- Available time slots ----------
+// One slot per hour: 08:00 ... 17:00 (we close at 18:00).
+const OPENING_HOUR = 8;
+const CLOSING_HOUR = 18;
+const CLOSED_DAY = 4; // Thursday (Sunday = 0 ... Saturday = 6)
+
+const bookingTimeSelect = document.getElementById("bookingTime");
+
+// Replace everything in the <select> with one message option.
+function setTimeMessage(text) {
+    bookingTimeSelect.innerHTML = "";
+    const option = document.createElement("option");
+    option.value = "";
+    option.textContent = text;
+    bookingTimeSelect.appendChild(option);
+}
+
+async function loadTimeSlots() {
+    const date = bookingDateInput.value;
+
+    if (!date) {
+        setTimeMessage("Choose a date first");
+        return;
+    }
+
+    if (new Date(date + "T00:00:00").getDay() === CLOSED_DAY) {
+        setTimeMessage("Closed on Thursdays");
+        return;
+    }
+
+    setTimeMessage("Loading times...");
+
+    let bookedTimes = [];
+
+    try {
+        const response = await fetch(
+            "/bookings/availability?service=" + encodeURIComponent(selectedServiceName) +
+            "&date=" + date
+        );
+
+        if (!response.ok) throw new Error("Status " + response.status);
+
+        const data = await response.json();
+        bookedTimes = data.bookedTimes;
+    } catch (error) {
+        // Not fatal: the server still refuses double bookings on submit.
+        console.error("Could not load availability:", error);
+    }
+
+    // If the person picked a different date while we were waiting, this answer is stale.
+    if (date !== bookingDateInput.value) return;
+
+    setTimeMessage("Select a time");
+
+    const now = new Date().toTimeString().slice(0, 5); // e.g. "14:35"
+
+    for (let hour = OPENING_HOUR; hour < CLOSING_HOUR; hour++) {
+        const slot = String(hour).padStart(2, "0") + ":00";
+        const isBooked = bookedTimes.includes(slot);
+        const isPast = date === today && slot <= now;
+
+        const option = document.createElement("option");
+        option.value = slot;
+        option.textContent = isBooked ? slot + " (booked)" : slot;
+        option.disabled = isBooked || isPast;
+        bookingTimeSelect.appendChild(option);
+    }
+}
+
+bookingDateInput.addEventListener("change", loadTimeSlots);
+
 
 
 bookingForm.addEventListener("submit", function (event) {
@@ -114,6 +188,7 @@ bookingForm.addEventListener("submit", function (event) {
         }).catch(error => {
             console.error("Booking failed:", error);
             alert(error.message);
+            loadTimeSlots(); // someone may have just taken that slot
         });
 });
 
@@ -124,6 +199,7 @@ newBooking.addEventListener("click", function () {
     bookingConfirmation.style.display = "none"
     bookingForm.style.display = "flex"
     bookingForm.reset();
+    loadTimeSlots();
 })
 const statusReference = document.getElementById("statusReference");
 const checkBooking = document.getElementById("checkBooking");
@@ -185,4 +261,3 @@ checkBooking.addEventListener("click", function () {
         });
 
 });
-
