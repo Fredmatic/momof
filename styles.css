@@ -1153,3 +1153,114 @@ body {
 #registerForm button:active {
     transform: scale(0.95);
 }
+
+/* ---------- Contact page ---------- */
+.contact-page {
+    width: 100%;
+    padding: 70px 40px;
+    text-align: center;
+}
+
+.contact-page h1 {
+    color: #ffaf1f;
+    font-size: 40px;
+    margin-bottom: 10px;
+}
+
+.contact-intro {
+    color: #ddd;
+    font-size: 17px;
+    margin-bottom: 40px;
+}
+
+.contact-container {
+    display: flex;
+    justify-content: center;
+    gap: 25px;
+    flex-wrap: wrap;
+}
+
+.contact-card {
+    width: 300px;
+    padding: 30px 25px;
+    background: rgba(0, 0, 0, 0.55);
+    border: 1px solid rgba(255, 175, 31, 0.5);
+    border-radius: 20px;
+    transition: 0.3s;
+}
+
+.contact-card:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 10px 25px rgba(255, 175, 31, 0.25);
+}
+
+.contact-card i {
+    font-size: 40px;
+    color: #ffaf1f;
+    margin-bottom: 15px;
+}
+
+.contact-card h3 {
+    color: #ffaf1f;
+    margin-bottom: 12px;
+}
+
+.contact-card p,
+.contact-card li {
+    color: #ddd;
+    line-height: 1.8;
+}
+
+.contact-card a {
+    color: #ffaf1f;
+    text-decoration: none;
+}
+
+.contact-card a.whatsapp-btn {
+    display: inline-block;
+    margin-top: 15px;
+    padding: 12px 26px;
+    border-radius: 25px;
+    background: #25d366;
+    color: #111;
+    font-weight: bold;
+    transition: 0.3s;
+}
+
+.contact-card a.whatsapp-btn:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 15px rgba(37, 211, 102, 0.4);
+}
+
+.hours-list {
+    list-style: none;
+    text-align: left;
+}
+
+.hours-list li {
+    display: flex;
+    justify-content: space-between;
+    gap: 15px;
+    padding: 6px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.hours-list li.closed span:last-child {
+    color: #ff6b6b;
+}
+
+/* Booked / past time slots in the booking form's <select> */
+#bookingForm select option:disabled {
+    color: #999;
+}
+
+@media (max-width: 768px) {
+    .contact-page {
+        padding: 50px 20px;
+    }
+
+    .contact-card {
+        width: 100%;
+        max-width: 320px;
+    }
+}
