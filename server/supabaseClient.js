@@ -7,8 +7,11 @@
 
 const { createClient } = require("@supabase/supabase-js");
 
-const SUPABASE_URL = process.env.SUPABASE_URL;
-const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+// .trim() guards against a stray newline/space sneaking in when a key is
+// copy-pasted into an environment variable field (a common source of
+// confusing "invalid header value" errors).
+const SUPABASE_URL = process.env.SUPABASE_URL?.trim();
+const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
 
 if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
     console.error(
