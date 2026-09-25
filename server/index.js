@@ -4,6 +4,7 @@ const path = require("path");
 const express = require("express");
 const cors = require("cors");
 const session = require("express-session");
+const rateLimit = require("express-rate-limit");
 const bcrypt = require("bcrypt");
 const supabase = require("./supabaseClient");
 
@@ -61,6 +62,19 @@ function requireAdmin(req, res, next) {
 
     next();
 }
+
+// Slows down password guessing: after 5 failed or successful attempts from
+// the same device in 15 minutes, further attempts get a 429 error instead
+// of reaching the database. Successful logins don't reset the count, so a
+// burst of correct logins from one shared device (e.g. reception) can also
+// hit the limit -- that's intentional, it's still a burst of attempts.
+const loginLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    limit: 5,
+    standardHeaders: true, // adds RateLimit-* response headers
+    legacyHeaders: false,
+    message: { message: "Too many login attempts. Please try again in 15 minutes." }
+});
 
 // Simple health-check endpoint (the "/" route itself is now served by
 // express.static above, which returns index.html).
@@ -294,7 +308,7 @@ app.post("/register", async (req, res) => {
 
 });
 
-app.post("/login", async (req, res) => {
+app.post("/login", loginLimiter, async (req, res) => {
 
     const { username, password } = req.body;
 
