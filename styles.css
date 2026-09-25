@@ -907,6 +907,72 @@ body {
     margin-bottom: 30px;
 }
 
+/* ---------- Reset a Customer's Password (admin page) ---------- */
+.reset-password-section {
+    padding: 50px 40px;
+    max-width: 420px;
+    margin: 0 auto;
+    text-align: center;
+}
+
+.reset-password-section h1 {
+    color: #ffaf1f;
+    margin-bottom: 8px;
+}
+
+.reset-password-section>p {
+    color: #ccc;
+    margin-bottom: 25px;
+}
+
+#resetPasswordForm {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+
+#resetPasswordForm input {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 14px 16px;
+    border: 2px solid rgba(255, 175, 31, 0.5);
+    border-radius: 15px;
+    background: rgba(0, 0, 0, 0.3);
+    color: #fff;
+    font-size: 15px;
+    outline: none;
+    transition: 0.3s;
+}
+
+#resetPasswordForm input:focus {
+    border-color: #ffaf1f;
+    box-shadow: 0 0 12px rgba(255, 215, 0, 0.4);
+}
+
+#resetPasswordForm button[type="submit"] {
+    padding: 14px;
+    border: none;
+    border-radius: 20px;
+    background: #ffaf1f;
+    color: #111;
+    font-weight: bold;
+    font-size: 16px;
+    cursor: pointer;
+    transition: 0.3s;
+}
+
+#resetPasswordForm button[type="submit"]:hover {
+    background: transparent;
+    color: #ffaf1f;
+    box-shadow: inset 0 0 0 2px #ffaf1f;
+}
+
+#resetPasswordMessage {
+    margin-top: 15px;
+    color: #ffd76a;
+    min-height: 18px;
+}
+
 #customerHistoryList {
     display: flex;
     flex-direction: column;
@@ -1429,4 +1495,32 @@ body {
 .service-card a.wa-btn:hover {
     transform: translateY(-3px);
     box-shadow: 0 8px 15px rgba(37, 211, 102, 0.4);
+}
+
+/* ---------- Show/hide password (register page) ---------- */
+.password-field {
+    position: relative;
+    width: 100%;
+}
+
+.password-field input {
+    padding-right: 45px !important;
+}
+
+.password-field .toggle-password {
+    position: absolute;
+    top: 50%;
+    right: 15px;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    padding: 0;
+    color: #aaa;
+    cursor: pointer;
+    font-size: 16px;
+    transition: 0.2s;
+}
+
+.password-field .toggle-password:hover {
+    color: gold;
 }

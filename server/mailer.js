@@ -29,6 +29,11 @@ if (isConfigured) {
         // STARTTLS, which nodemailer negotiates automatically when secure
         // is false.
         secure: Number(SMTP_PORT) === 465,
+        // Some hosts (e.g. Render's free tier) don't support outbound
+        // IPv6, but smtp.gmail.com resolves to an IPv6 address first,
+        // causing an instant "ENETUNREACH" failure. Forcing IPv4 avoids
+        // that entirely.
+        family: 4,
         auth: {
             user: SMTP_USER,
             pass: SMTP_PASS
@@ -141,8 +146,23 @@ async function sendBookingStatusEmail(booking) {
     });
 }
 
+// Sent when a customer requests a password reset.
+async function sendPasswordResetEmail({ email, username, resetLink }) {
+    await send({
+        to: email,
+        subject: "Reset your MOMO's PALOR password",
+        html: `
+            <h2>Password reset requested</h2>
+            <p>Hi ${username}, we received a request to reset your password.</p>
+            <p><a href="${resetLink}">Click here to choose a new password</a></p>
+            <p>This link expires in 1 hour. If you didn't request this, you can safely ignore this email.</p>
+        `
+    });
+}
+
 module.exports = {
     sendBookingReceivedEmail,
     sendAdminNewBookingEmail,
-    sendBookingStatusEmail
+    sendBookingStatusEmail,
+    sendPasswordResetEmail
 };

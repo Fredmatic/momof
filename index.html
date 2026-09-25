@@ -6,15 +6,30 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MOMO's PALOR</title>
     <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="loader.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 
 <body>
+    <div class="page-loader" id="pageLoader">
+        <img src="images/momob.png" alt="MOMO's PALOR">
+        <div class="page-loader-ring"></div>
+    </div>
     <form class="login" id="loginForm">
+        <img src="images/momob.png" alt="MOMO's PALOR" class="login-logo">
         <h1 class="title">Login</h1>
         <p>Welcome to MOMO'S PALOR </p>
-        <input type="text" id="userNameInput" name="username" placeholder="User Name">
-        <input type="password" id="passwordInput" name="password" placeholder="Password">
+        <div class="input-group">
+            <i class="fas fa-user"></i>
+            <input type="text" id="userNameInput" name="username" placeholder="User Name">
+        </div>
+        <div class="input-group password-field">
+            <i class="fas fa-lock"></i>
+            <input type="password" id="passwordInput" name="password" placeholder="Password">
+            <button type="button" class="toggle-password" data-target="passwordInput" aria-label="Show password">
+                <i class="fas fa-eye"></i>
+            </button>
+        </div>
         <button id="submit">LOGIN</button>
         <p id="message"></p>
     </form>
@@ -67,6 +82,7 @@
             <p>&copy; 2026 MOMO's PALOR</p>
         </div>
     </footer>
+    <script src="loader.js"></script>
     <script src="script.js"></script>
 </body>
 

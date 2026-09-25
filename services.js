@@ -40,8 +40,8 @@ bookingDateInput.min = today;
 // ---------- Available time slots ----------
 // One slot per hour: 08:00 ... 17:00 (we close at 18:00).
 const OPENING_HOUR = 8;
-const CLOSING_HOUR = 18;
-const CLOSED_DAY = 4; // Thursday (Sunday = 0 ... Saturday = 6)
+const CLOSING_HOUR = 22; // 10:00 PM
+// Open every day, so no CLOSED_DAY check anymore.
 
 const bookingTimeSelect = document.getElementById("bookingTime");
 
@@ -59,11 +59,6 @@ async function loadTimeSlots() {
 
     if (!date) {
         setTimeMessage("Choose a date first");
-        return;
-    }
-
-    if (new Date(date + "T00:00:00").getDay() === CLOSED_DAY) {
-        setTimeMessage("Closed on Thursdays");
         return;
     }
 

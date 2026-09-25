@@ -71,6 +71,7 @@ if (
     currentPage.includes("home.html") ||
     currentPage.includes("services.html") ||
     currentPage.includes("products.html") ||
+    currentPage.includes("my-bookings.html") ||
     currentPage.includes("contact.html")
 ) {
 
@@ -159,3 +160,25 @@ if (registerForm) {
     });
 
 }
+
+// Show/hide password: works on any page for any <button class="toggle-password"
+// data-target="idOfThePasswordInput"> next to a password field. One handler
+// covers login, register, and any future password field, so nothing extra
+// is needed when a new one is added elsewhere.
+document.querySelectorAll(".toggle-password").forEach(function (button) {
+
+    const input = document.getElementById(button.dataset.target);
+    const icon = button.querySelector("i");
+
+    button.addEventListener("click", function () {
+
+        const showing = input.type === "text";
+
+        input.type = showing ? "password" : "text";
+        icon.classList.toggle("fa-eye", showing);
+        icon.classList.toggle("fa-eye-slash", !showing);
+        button.setAttribute("aria-label", showing ? "Show password" : "Hide password");
+
+    });
+
+});
