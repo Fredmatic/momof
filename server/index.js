@@ -101,7 +101,8 @@ app.post("/bookings", async (req, res) => {
                 time: booking.time,
                 name: booking.name,
                 phone: booking.phone,
-                status: booking.status || "pending"
+                status: booking.status || "pending",
+                username: req.session.user ? req.session.user.username : null
             });
 
         if (insertError) throw insertError;
@@ -157,6 +158,25 @@ app.get("/bookings/status/:reference", async (req, res) => {
 
     if (!data) {
         return res.status(404).json({ message: "Booking not found." });
+    }
+
+    res.json(data);
+
+});
+
+// A logged-in customer's own bookings, newest first (for "My Bookings").
+app.get("/bookings/mine", requireLogin, async (req, res) => {
+
+    const { data, error } = await supabase
+        .from("bookings")
+        .select("*")
+        .eq("username", req.session.user.username)
+        .order("date", { ascending: false })
+        .order("time", { ascending: false });
+
+    if (error) {
+        console.error("Error fetching my bookings:", error.message);
+        return res.status(500).json({ message: "Could not load your bookings." });
     }
 
     res.json(data);

@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Bookings - MOMO's PALOR</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+
+<body>
+    <header class="header">
+        <div class="logo">
+            <img src="images/momob.png" alt="image" width="100px" height="100px">
+            <h2>MOMO'S PALOR</h2>
+        </div>
+        <nav class="navbar">
+            <a href="home.html">Home</a>
+            <a href="services.html">Services</a>
+            <a href="my-bookings.html" class="active">My Bookings</a>
+            <a href="#">Products</a>
+            <a href="contact.html">Contact</a>
+        </nav>
+        <button id="logout">
+            <i class="fas fa-right-from-bracket"></i>Logout
+        </button>
+    </header>
+
+    <main class="booking-status-section">
+
+        <h2>My Bookings</h2>
+        <p>Everything you've booked with us, most recent first.</p>
+
+        <div id="bookingsList"></div>
+
+        <p id="bookingsEmpty" style="display: none;">
+            You don't have any bookings yet. <a href="services.html">Book a service</a> to get started.
+        </p>
+
+        <p id="bookingsError" style="display: none; color: #f44336;"></p>
+
+    </main>
+
+    <footer class="footer">
+
+        <div class="footer-container">
+
+            <div class="footer-about">
+                <h3>MOMO's PALOR</h3>
+                <p>
+                    Your trusted place for beauty, care and confidence.
+                    We are here to help you look and feel your best.
+                </p>
+            </div>
+
+            <div class="footer-links">
+                <h3>Quick Links</h3>
+                <a href="home.html">Home</a>
+                <a href="services.html">Services</a>
+                <a href="my-bookings.html">My Bookings</a>
+                <a href="#">Products</a>
+                <a href="contact.html">Contact</a>
+            </div>
+
+            <div class="footer-contact">
+                <h3>Contact Us</h3>
+                <p><i class="fas fa-phone"></i> +256 766 513 833</p>
+                <p><i class="fas fa-envelope"></i> info@momospalor.com</p>
+                <p><i class="fas fa-location-dot"></i> Kampala, Uganda</p>
+            </div>
+
+            <div class="footer-social">
+                <h3>Follow Us</h3>
+                <div>
+                    <a href="#"><i class="fab fa-facebook"></i></a>
+                    <a href="#"><i class="fab fa-instagram"></i></a>
+                    <a href="#"><i class="fab fa-tiktok"></i></a>
+                </div>
+            </div>
+
+        </div>
+
+        <div class="footer-bottom">
+            <p>&copy; 2026 MOMO'S PALOR. All rights reserved.</p>
+        </div>
+
+    </footer>
+
+    <script src="logout.js"></script>
+    <script src="script.js"></script>
+    <script src="my-bookings.js"></script>
+</body>
+
+</html>
