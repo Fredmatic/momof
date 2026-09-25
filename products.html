@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Products - MOMO's PALOR</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+
+<body>
+    <header class="header">
+        <div class="logo">
+            <img src="images/momob.png" alt="Momo' Palor logo" width="100px" height="100px">
+            <h2>MOMO'S PALOR</h2>
+        </div>
+        <nav class="navbar">
+            <a href="home.html">Home</a>
+            <a href="services.html">Services</a>
+            <a href="my-bookings.html">My Bookings</a>
+            <a href="products.html" class="active">Products</a>
+            <a href="contact.html">Contact</a>
+        </nav>
+        <button id="logout">
+            <i class="fas fa-right-from-bracket"></i>Logout
+        </button>
+    </header>
+
+    <section class="services-page">
+
+        <div class="section-title">
+            <h1>Our Products</h1>
+            <p>Ask us what's in stock and we'll sort you out on WhatsApp.</p>
+        </div>
+
+        <div class="service-container">
+
+            <!--
+                ================================================================
+                 HOW TO ADD A REAL PRODUCT (once you have its photo, name, price):
+                 1. Copy one whole <div class="service-card">...</div> block below.
+                 2. Change the <img src="..."> to your product's photo in /images.
+                 3. Change the <h3> to the product name.
+                 4. Add a price line, e.g. <p class="product-price">UGX 15,000</p>
+                 5. Change the wa.me text= part at the end of the link to mention
+                    that product by name (spaces become %20).
+                ================================================================
+            -->
+
+            <div class="service-card">
+                <img src="images/product1.jpg" alt="Hair care products">
+                <h3>Hair Care</h3>
+                <p>Shampoos, oils and styling products.</p>
+                <a class="wa-btn"
+                    href="https://wa.me/256766513833?text=Hello%20MOMO%27s%20PALOR%2C%20what%20hair%20care%20products%20do%20you%20have%20in%20stock%3F"
+                    target="_blank" rel="noopener">Ask on WhatsApp</a>
+            </div>
+
+            <div class="service-card">
+                <img src="images/product2.jpg" alt="Skin care products">
+                <h3>Skin Care</h3>
+                <p>Creams, serums and facial care.</p>
+                <a class="wa-btn"
+                    href="https://wa.me/256766513833?text=Hello%20MOMO%27s%20PALOR%2C%20what%20skin%20care%20products%20do%20you%20have%20in%20stock%3F"
+                    target="_blank" rel="noopener">Ask on WhatsApp</a>
+            </div>
+
+            <div class="service-card">
+                <img src="images/product3.jpg" alt="Makeup and beauty tools">
+                <h3>Makeup & Tools</h3>
+                <p>Makeup, brushes and beauty accessories.</p>
+                <a class="wa-btn"
+                    href="https://wa.me/256766513833?text=Hello%20MOMO%27s%20PALOR%2C%20what%20makeup%20products%20do%20you%20have%20in%20stock%3F"
+                    target="_blank" rel="noopener">Ask on WhatsApp</a>
+            </div>
+
+        </div>
+
+    </section>
+
+    <script src="logout.js"></script>
+    <script src="script.js"></script>
+</body>
+
+</html>
