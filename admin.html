@@ -51,6 +51,11 @@
                 <option value="completed">Completed</option>
                 <option value="cancelled">Cancelled</option>
             </select>
+
+            <label class="hide-done-label">
+                <input type="checkbox" id="hideDone">
+                Hide completed &amp; cancelled
+            </label>
         </div>
 
 
@@ -81,6 +86,16 @@
             <div class="stat-card">
                 <h3>Cancelled</h3>
                 <p id="cancelledBookings">0</p>
+            </div>
+
+            <div class="stat-card revenue-card">
+                <h3>Revenue (This Month)</h3>
+                <p id="monthRevenue">UGX 0</p>
+            </div>
+
+            <div class="stat-card revenue-card">
+                <h3>Revenue (All Time)</h3>
+                <p id="totalRevenue">UGX 0</p>
             </div>
 
         </div>

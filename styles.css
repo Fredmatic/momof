@@ -672,6 +672,10 @@ body {
     font-weight: bold;
 }
 
+.stat-card.revenue-card p {
+    font-size: 20px;
+}
+
 .booking-actions button:disabled {
     opacity: 0.5;
     cursor: not-allowed;
@@ -802,8 +806,28 @@ body {
 
 .booking-filter {
     display: flex;
+    flex-wrap: wrap;
     justify-content: center;
+    align-items: center;
+    gap: 16px;
     margin-bottom: 30px;
+}
+
+.hide-done-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: white;
+    font-size: 15px;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.hide-done-label input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    accent-color: #ffaf1f;
+    cursor: pointer;
 }
 
 #statusFilter {

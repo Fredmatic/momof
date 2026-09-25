@@ -7,6 +7,7 @@ const session = require("express-session");
 const rateLimit = require("express-rate-limit");
 const bcrypt = require("bcrypt");
 const supabase = require("./supabaseClient");
+const { sendBookingReceivedEmail, sendAdminNewBookingEmail, sendBookingStatusEmail } = require("./mailer");
 
 const app = express();
 
@@ -115,6 +116,7 @@ app.post("/bookings", async (req, res) => {
                 time: booking.time,
                 name: booking.name,
                 phone: booking.phone,
+                email: booking.email || null,
                 status: booking.status || "pending",
                 username: req.session.user ? req.session.user.username : null
             });
@@ -126,6 +128,10 @@ app.post("/bookings", async (req, res) => {
         res.json({
             message: "Booking received successfully"
         });
+
+        // Fire-and-forget: emails never block or fail the booking response.
+        sendBookingReceivedEmail(booking);
+        sendAdminNewBookingEmail(booking);
 
     } catch (error) {
         console.error("Error creating booking:", error.message);
@@ -253,6 +259,9 @@ app.patch("/bookings/:reference", requireAdmin, async (req, res) => {
         message: "Booking status updated",
         booking: data
     });
+
+    // Fire-and-forget: emails never block or fail the status update response.
+    sendBookingStatusEmail(data);
 
 });
 

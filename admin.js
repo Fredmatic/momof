@@ -25,6 +25,7 @@ fetch("/check-login", {
 const bookingsList = document.getElementById("bookingsList");
 const bookingSearch = document.getElementById("bookingSearch");
 const statusFilter = document.getElementById("statusFilter");
+const hideDone = document.getElementById("hideDone");
 const refreshBookings = document.getElementById("refreshBookings");
 
 const customersList = document.getElementById("customersList");
@@ -34,6 +35,24 @@ const pendingBookings = document.getElementById("pendingBookings");
 const confirmedBookings = document.getElementById("confirmedBookings");
 const completedBookings = document.getElementById("completedBookings");
 const cancelledBookings = document.getElementById("cancelledBookings");
+const monthRevenue = document.getElementById("monthRevenue");
+const totalRevenue = document.getElementById("totalRevenue");
+
+// Holds every booking fetched from the server, so search/filter/hide can
+// all be applied locally without hitting the network again each time.
+let allBookings = [];
+
+// Booking "price" is stored as free-form text (e.g. "50000"), so pull out
+// just the digits before treating it as a number.
+function priceToNumber(price) {
+    const digitsOnly = String(price || "").replace(/[^\d]/g, "");
+    return digitsOnly ? parseInt(digitsOnly, 10) : 0;
+}
+
+function formatUGX(amount) {
+    return "UGX " + amount.toLocaleString("en-UG");
+}
+
 
 
 function showBookings(bookings) {
@@ -54,6 +73,7 @@ function showBookings(bookings) {
             <p>Time: ${booking.time}</p>
             <p>Customer: ${booking.name}</p>
             <p>Phone: ${booking.phone}</p>
+            ${booking.email ? `<p>Email: ${booking.email}</p>` : ""}
 
             <p>
                 Status:
@@ -316,11 +336,18 @@ function loadBookings() {
 
         .then(data => {
 
+            allBookings = data;
+
             let pending = 0;
             let confirmed = 0;
             let cancelled = 0;
             let completed = 0;
+            let monthTotal = 0;
+            let allTimeTotal = 0;
 
+            const now = new Date();
+            const currentMonth = now.getMonth();
+            const currentYear = now.getFullYear();
 
             data.forEach(booking => {
 
@@ -335,8 +362,27 @@ function loadBookings() {
                 if (booking.status === "cancelled") {
                     cancelled++;
                 }
+
                 if (booking.status === "completed") {
+
                     completed++;
+
+                    // Revenue only counts completed bookings -- pending or
+                    // cancelled bookings were never actually paid for.
+                    const amount = priceToNumber(booking.price);
+                    allTimeTotal += amount;
+
+                    // booking.date is the appointment date (YYYY-MM-DD),
+                    // parsed as local time so "this month" matches what an
+                    // admin in the same timezone expects.
+                    const bookingDate = new Date(booking.date + "T00:00:00");
+
+                    if (
+                        bookingDate.getMonth() === currentMonth &&
+                        bookingDate.getFullYear() === currentYear
+                    ) {
+                        monthTotal += amount;
+                    }
                 }
 
             });
@@ -347,112 +393,67 @@ function loadBookings() {
             confirmedBookings.textContent = confirmed;
             cancelledBookings.textContent = cancelled;
             completedBookings.textContent = completed;
+            monthRevenue.textContent = formatUGX(monthTotal);
+            totalRevenue.textContent = formatUGX(allTimeTotal);
 
 
-            // Show all bookings
-            showBookings(data);
+            // Re-apply whatever search/filter/hide-done state is currently
+            // set, rather than always showing everything after a reload.
+            renderFilteredBookings();
 
             showCustomers(data);
 
         });
 }
 
-// bookingSearch.addEventListener("input", function () {
+// Applies the search box, status dropdown, and "hide completed &
+// cancelled" checkbox together against the cached allBookings list, with
+// no extra network request.
+function renderFilteredBookings() {
 
-//     const searchText = bookingSearch.value.toLowerCase();
+    const searchText = bookingSearch.value.toLowerCase();
+    const selectedStatus = statusFilter.value;
 
-//     fetch("/bookings")
-//         .then(response => response.json())
-//         .then(data => {
+    let results = allBookings;
 
-//             const results = data.filter(booking =>
-//                 booking.name.toLowerCase().includes(searchText) ||
-//                 booking.reference.toLowerCase().includes(searchText)
-//             );
+    if (searchText) {
+        results = results.filter(booking =>
+            booking.name.toLowerCase().includes(searchText) ||
+            booking.reference.toLowerCase().includes(searchText)
+        );
+    }
 
-//             showBookings(results);
+    if (selectedStatus !== "all") {
+        results = results.filter(booking =>
+            (booking.status || "pending") === selectedStatus
+        );
+    }
 
-//         });
+    if (hideDone.checked) {
+        results = results.filter(booking =>
+            booking.status !== "completed" && booking.status !== "cancelled"
+        );
+    }
 
-// });
-// statusFilter.addEventListener("change", function () {
+    showBookings(results);
+}
 
-//     const selectedStatus = statusFilter.value;
+// (Old commented-out search/filter code removed -- replaced by
+// renderFilteredBookings(), which combines search, status, and
+// hide-completed filtering against the cached allBookings list.)
 
-//     fetch("/bookings")
-//         .then(response => response.json())
-//         .then(data => {
-
-//             let results = data;
-
-//             if (selectedStatus !== "all") {
-
-//                 results = data.filter(booking =>
-//                     (booking.status || "pending") === selectedStatus
-//                 );
-
-//             }
-
-//             showBookings(results);
-
-//         });
-
-// });
 function startAdminDashboard() {
 
     loadBookings();
 
-    bookingSearch.addEventListener("input", function () {
+    bookingSearch.addEventListener("input", renderFilteredBookings);
 
-        const searchText = bookingSearch.value.toLowerCase();
+    statusFilter.addEventListener("change", renderFilteredBookings);
 
-        fetch("/bookings", {
-            credentials: "include"
-        })
-            .then(response => response.json())
-            .then(data => {
-
-                const results = data.filter(booking =>
-                    booking.name.toLowerCase().includes(searchText) ||
-                    booking.reference.toLowerCase().includes(searchText)
-                );
-
-                showBookings(results);
-
-            });
-
-    });
-
-    statusFilter.addEventListener("change", function () {
-
-        const selectedStatus = statusFilter.value;
-
-        fetch("/bookings", {
-            credentials: "include"
-        })
-            .then(response => response.json())
-            .then(data => {
-
-                let results = data;
-
-                if (selectedStatus !== "all") {
-
-                    results = data.filter(booking =>
-                        (booking.status || "pending") === selectedStatus
-                    );
-
-                }
-
-                showBookings(results);
-
-            });
-
-    });
+    hideDone.addEventListener("change", renderFilteredBookings);
 
     refreshBookings.addEventListener("click", function () {
         loadBookings();
     });
 
 }
-
-

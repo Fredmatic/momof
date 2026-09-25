@@ -136,6 +136,7 @@ bookingForm.addEventListener("submit", function (event) {
     }
     const customerName = document.getElementById("customerName").value;
     const customerPhone = document.getElementById("customerPhone").value;
+    const customerEmail = document.getElementById("customerEmail").value;
 
     const bookingReference =
         "MP-" + Math.floor(10000 + Math.random() * 90000);
@@ -154,6 +155,7 @@ bookingForm.addEventListener("submit", function (event) {
             time: bookingTime,
             name: customerName,
             phone: customerPhone,
+            email: customerEmail,
             reference: bookingReference,
             status: "pending"
         })
@@ -183,7 +185,8 @@ bookingForm.addEventListener("submit", function (event) {
                 "Date: " + bookingDate + "<br>" +
                 "Time: " + bookingTime + "<br>" +
                 "Name: " + customerName + "<br>" +
-                "Phone: " + customerPhone;
+                "Phone: " + customerPhone +
+                (customerEmail ? "<br>Email: " + customerEmail : "");
 
         }).catch(error => {
             console.error("Booking failed:", error);
