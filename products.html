@@ -39,47 +39,8 @@
             <p>Ask us what's in stock and we'll sort you out on WhatsApp.</p>
         </div>
 
-        <div class="service-container">
-
-            <!--
-                ================================================================
-                 HOW TO ADD A REAL PRODUCT (once you have its photo, name, price):
-                 1. Copy one whole <div class="service-card">...</div> block below.
-                 2. Change the <img src="..."> to your product's photo in /images.
-                 3. Change the <h3> to the product name.
-                 4. Add a price line, e.g. <p class="product-price">UGX 15,000</p>
-                 5. Change the wa.me text= part at the end of the link to mention
-                    that product by name (spaces become %20).
-                ================================================================
-            -->
-
-            <div class="service-card">
-                <img src="images/product1.jpg" alt="Hair care products">
-                <h3>Hair Care</h3>
-                <p>Shampoos, oils and styling products.</p>
-                <a class="wa-btn"
-                    href="https://wa.me/256766513833?text=Hello%20MOMO%27s%20PALOR%2C%20what%20hair%20care%20products%20do%20you%20have%20in%20stock%3F"
-                    target="_blank" rel="noopener">Ask on WhatsApp</a>
-            </div>
-
-            <div class="service-card">
-                <img src="images/product2.jpg" alt="Skin care products">
-                <h3>Skin Care</h3>
-                <p>Creams, serums and facial care.</p>
-                <a class="wa-btn"
-                    href="https://wa.me/256766513833?text=Hello%20MOMO%27s%20PALOR%2C%20what%20skin%20care%20products%20do%20you%20have%20in%20stock%3F"
-                    target="_blank" rel="noopener">Ask on WhatsApp</a>
-            </div>
-
-            <div class="service-card">
-                <img src="images/product3.jpg" alt="Makeup and beauty tools">
-                <h3>Makeup & Tools</h3>
-                <p>Makeup, brushes and beauty accessories.</p>
-                <a class="wa-btn"
-                    href="https://wa.me/256766513833?text=Hello%20MOMO%27s%20PALOR%2C%20what%20makeup%20products%20do%20you%20have%20in%20stock%3F"
-                    target="_blank" rel="noopener">Ask on WhatsApp</a>
-            </div>
-
+        <div class="service-container" id="productsContainer">
+            <p class="loading-message">Loading products...</p>
         </div>
 
     </section>
@@ -87,6 +48,7 @@
     <script src="loader.js"></script>
     <script src="logout.js"></script>
     <script src="script.js"></script>
+    <script src="products.js"></script>
 </body>
 
 </html>

@@ -442,6 +442,128 @@ app.post("/create-admin", async (req, res) => {
 
 });
 
+// Public: anyone can see the product list, including out-of-stock items
+// (the frontend shows those with a badge instead of the WhatsApp button,
+// rather than hiding them, so the admin can still see what's temporarily
+// unavailable).
+app.get("/products", async (req, res) => {
+
+    try {
+
+        const { data, error } = await supabase
+            .from("products")
+            .select("*")
+            .order("created_at", { ascending: false });
+
+        if (error) throw error;
+
+        res.json(data);
+
+    } catch (error) {
+        console.error("Error fetching products:", error.message);
+        res.status(500).json({ message: "Something went wrong while loading products." });
+    }
+
+});
+
+// Admin-only: add a new product.
+app.post("/products", requireAdmin, async (req, res) => {
+
+    const { name, description, price, image, in_stock } = req.body;
+
+    if (!name || price === undefined || price === null || price === "") {
+        return res.status(400).json({
+            message: "A name and price are required."
+        });
+    }
+
+    try {
+
+        const { data, error } = await supabase
+            .from("products")
+            .insert({
+                name,
+                description: description || null,
+                price,
+                image: image || null,
+                in_stock: in_stock !== false
+            })
+            .select()
+            .single();
+
+        if (error) throw error;
+
+        res.json(data);
+
+    } catch (error) {
+        console.error("Error creating product:", error.message);
+        res.status(500).json({ message: "Something went wrong while adding the product." });
+    }
+
+});
+
+// Admin-only: update any fields on an existing product (name, price,
+// description, image, or in_stock -- e.g. to mark something as
+// out-of-stock without deleting it).
+app.patch("/products/:id", requireAdmin, async (req, res) => {
+
+    const { id } = req.params;
+    const { name, description, price, image, in_stock } = req.body;
+
+    const updates = {};
+    if (name !== undefined) updates.name = name;
+    if (description !== undefined) updates.description = description;
+    if (price !== undefined) updates.price = price;
+    if (image !== undefined) updates.image = image;
+    if (in_stock !== undefined) updates.in_stock = in_stock;
+
+    try {
+
+        const { data, error } = await supabase
+            .from("products")
+            .update(updates)
+            .eq("id", id)
+            .select()
+            .maybeSingle();
+
+        if (error) throw error;
+
+        if (!data) {
+            return res.status(404).json({ message: "Product not found." });
+        }
+
+        res.json(data);
+
+    } catch (error) {
+        console.error("Error updating product:", error.message);
+        res.status(500).json({ message: "Something went wrong while updating the product." });
+    }
+
+});
+
+// Admin-only: permanently remove a product.
+app.delete("/products/:id", requireAdmin, async (req, res) => {
+
+    const { id } = req.params;
+
+    try {
+
+        const { error } = await supabase
+            .from("products")
+            .delete()
+            .eq("id", id);
+
+        if (error) throw error;
+
+        res.json({ message: "Product deleted." });
+
+    } catch (error) {
+        console.error("Error deleting product:", error.message);
+        res.status(500).json({ message: "Something went wrong while deleting the product." });
+    }
+
+});
+
 // Admin-only: reset a customer's password directly, no email required.
 // This exists specifically because automated email isn't available on the
 // free Render plan -- the admin looks the customer up by username (having

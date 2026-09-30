@@ -118,6 +118,38 @@
             <div id="customersList"></div>
         </section>
 
+        <section class="products-section">
+            <h1>Manage Products</h1>
+            <p>Add products for the Products page. Add a photo to the images folder first, then type its filename below.
+            </p>
+
+            <form id="productForm">
+
+                <input type="hidden" id="productId">
+
+                <input type="text" id="productName" placeholder="Product name" required>
+
+                <textarea id="productDescription" placeholder="Short description" rows="2"></textarea>
+
+                <input type="number" id="productPrice" placeholder="Price (UGX)" min="0" required>
+
+                <input type="text" id="productImage" placeholder="Image filename (e.g. product1.jpg)">
+
+                <label class="hide-done-label">
+                    <input type="checkbox" id="productInStock" checked>
+                    In stock
+                </label>
+
+                <button type="submit" id="productFormSubmit">Add Product</button>
+                <button type="button" id="productFormCancel" style="display:none;">Cancel Edit</button>
+
+            </form>
+
+            <p id="productMessage"></p>
+
+            <div id="productsAdminList"></div>
+        </section>
+
         <section class="customer-history">
             <h1>Customer Booking History</h1>
 

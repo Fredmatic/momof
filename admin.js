@@ -492,4 +492,184 @@ function startAdminDashboard() {
 
     });
 
+    startProductManager();
+
+}
+
+// ---------- Product management ----------
+
+function startProductManager() {
+
+    const productForm = document.getElementById("productForm");
+    const productFormSubmit = document.getElementById("productFormSubmit");
+    const productFormCancel = document.getElementById("productFormCancel");
+    const productMessage = document.getElementById("productMessage");
+    const productsAdminList = document.getElementById("productsAdminList");
+
+    const productId = document.getElementById("productId");
+    const productName = document.getElementById("productName");
+    const productDescription = document.getElementById("productDescription");
+    const productPrice = document.getElementById("productPrice");
+    const productImage = document.getElementById("productImage");
+    const productInStock = document.getElementById("productInStock");
+
+    function resetForm() {
+        productForm.reset();
+        productId.value = "";
+        productInStock.checked = true;
+        productFormSubmit.textContent = "Add Product";
+        productFormCancel.style.display = "none";
+    }
+
+    function loadProducts() {
+
+        fetch("/products")
+            .then(response => response.json())
+            .then(products => {
+
+                if (products.length === 0) {
+                    productsAdminList.innerHTML = '<p class="empty-message">No products added yet.</p>';
+                    return;
+                }
+
+                productsAdminList.innerHTML = products.map(product => {
+
+                    const imageSrc = product.image ? `images/${product.image}` : "images/image.jpg";
+
+                    return `
+                        <div class="product-admin-card">
+                            <img src="${imageSrc}" alt="${product.name}">
+                            <div class="product-admin-info">
+                                <h4>${product.name} -- UGX ${Number(product.price).toLocaleString("en-UG")}</h4>
+                                <p>${product.in_stock ? "In stock" : "Out of stock"}</p>
+                            </div>
+                            <div class="product-admin-actions">
+                                <button class="btn-edit" data-id="${product.id}">Edit</button>
+                                <button class="btn-toggle" data-id="${product.id}" data-instock="${product.in_stock}">
+                                    ${product.in_stock ? "Mark Out of Stock" : "Mark In Stock"}
+                                </button>
+                                <button class="btn-delete" data-id="${product.id}">Delete</button>
+                            </div>
+                        </div>
+                    `;
+
+                }).join("");
+
+                // Wire up the buttons just rendered above.
+
+                productsAdminList.querySelectorAll(".btn-edit").forEach(button => {
+                    button.addEventListener("click", function () {
+
+                        const product = products.find(p => p.id === button.dataset.id);
+                        if (!product) return;
+
+                        productId.value = product.id;
+                        productName.value = product.name;
+                        productDescription.value = product.description || "";
+                        productPrice.value = product.price;
+                        productImage.value = product.image || "";
+                        productInStock.checked = product.in_stock;
+
+                        productFormSubmit.textContent = "Update Product";
+                        productFormCancel.style.display = "inline-block";
+
+                        productForm.scrollIntoView({ behavior: "smooth" });
+
+                    });
+                });
+
+                productsAdminList.querySelectorAll(".btn-toggle").forEach(button => {
+                    button.addEventListener("click", function () {
+
+                        const newInStock = button.dataset.instock !== "true";
+
+                        fetch(`/products/${button.dataset.id}`, {
+                            method: "PATCH",
+                            headers: { "Content-Type": "application/json" },
+                            credentials: "include",
+                            body: JSON.stringify({ in_stock: newInStock })
+                        })
+                            .then(() => loadProducts());
+
+                    });
+                });
+
+                productsAdminList.querySelectorAll(".btn-delete").forEach(button => {
+                    button.addEventListener("click", function () {
+
+                        if (!confirm("Delete this product? This can't be undone.")) {
+                            return;
+                        }
+
+                        fetch(`/products/${button.dataset.id}`, {
+                            method: "DELETE",
+                            credentials: "include"
+                        })
+                            .then(() => loadProducts());
+
+                    });
+                });
+
+            });
+
+    }
+
+    productForm.addEventListener("submit", function (event) {
+
+        event.preventDefault();
+
+        const payload = {
+            name: productName.value.trim(),
+            description: productDescription.value.trim(),
+            price: Number(productPrice.value),
+            image: productImage.value.trim(),
+            in_stock: productInStock.checked
+        };
+
+        const isEditing = Boolean(productId.value);
+
+        const request = isEditing
+            ? fetch(`/products/${productId.value}`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                credentials: "include",
+                body: JSON.stringify(payload)
+            })
+            : fetch("/products", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                credentials: "include",
+                body: JSON.stringify(payload)
+            });
+
+        productMessage.textContent = isEditing ? "Updating..." : "Adding...";
+
+        request
+            .then(response => response.json().then(data => ({ ok: response.ok, data })))
+            .then(({ ok, data }) => {
+
+                if (!ok) {
+                    productMessage.textContent = data.message || "Something went wrong.";
+                    productMessage.style.color = "#ff6b6b";
+                    return;
+                }
+
+                productMessage.textContent = isEditing ? "Product updated." : "Product added.";
+                productMessage.style.color = "#4caf50";
+
+                resetForm();
+                loadProducts();
+
+            })
+            .catch(() => {
+                productMessage.textContent = "Something went wrong. Please try again.";
+                productMessage.style.color = "#ff6b6b";
+            });
+
+    });
+
+    productFormCancel.addEventListener("click", resetForm);
+
+    loadProducts();
+
 }

@@ -154,6 +154,25 @@ body {
 
 }
 
+.loading-message,
+.empty-message {
+    color: #ccc;
+    font-size: 16px;
+    text-align: center;
+    width: 100%;
+    padding: 40px 0;
+}
+
+.service-card .out-of-stock-badge {
+    display: inline-block;
+    padding: 10px 20px;
+    border-radius: 20px;
+    background: rgba(255, 255, 255, 0.08);
+    color: #aaa;
+    font-size: 14px;
+    font-weight: bold;
+}
+
 .service-card {
     width: 220px;
     padding: 30px 20px;
@@ -906,6 +925,162 @@ body {
     text-align: center;
     margin-bottom: 30px;
 }
+
+/* ---------- Manage Products (admin page) ---------- */
+.products-section {
+    padding: 50px 40px;
+    max-width: 600px;
+    margin: 0 auto;
+    text-align: center;
+}
+
+.products-section h1 {
+    color: #ffaf1f;
+    margin-bottom: 8px;
+}
+
+.products-section>p {
+    color: #ccc;
+    margin-bottom: 25px;
+}
+
+#productForm {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    text-align: left;
+}
+
+#productForm input,
+#productForm textarea {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 14px 16px;
+    border: 2px solid rgba(255, 175, 31, 0.5);
+    border-radius: 15px;
+    background: rgba(0, 0, 0, 0.3);
+    color: #fff;
+    font-size: 15px;
+    outline: none;
+    transition: 0.3s;
+    font-family: inherit;
+    resize: vertical;
+}
+
+#productForm input:focus,
+#productForm textarea:focus {
+    border-color: #ffaf1f;
+    box-shadow: 0 0 12px rgba(255, 215, 0, 0.4);
+}
+
+#productForm button {
+    padding: 14px;
+    border: none;
+    border-radius: 20px;
+    background: #ffaf1f;
+    color: #111;
+    font-weight: bold;
+    font-size: 16px;
+    cursor: pointer;
+    transition: 0.3s;
+}
+
+#productForm button:hover {
+    background: transparent;
+    color: #ffaf1f;
+    box-shadow: inset 0 0 0 2px #ffaf1f;
+}
+
+#productForm #productFormCancel {
+    background: transparent;
+    color: #ccc;
+    box-shadow: inset 0 0 0 2px #555;
+}
+
+#productForm #productFormCancel:hover {
+    color: #fff;
+    box-shadow: inset 0 0 0 2px #999;
+}
+
+#productMessage {
+    margin-top: 15px;
+    color: #ffd76a;
+    min-height: 18px;
+}
+
+#productsAdminList {
+    margin-top: 30px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    text-align: left;
+}
+
+.product-admin-card {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    padding: 14px 18px;
+    border: 1px solid rgba(255, 175, 31, 0.3);
+    border-radius: 15px;
+    background: rgba(0, 0, 0, 0.3);
+}
+
+.product-admin-card img {
+    width: 55px;
+    height: 55px;
+    object-fit: cover;
+    border-radius: 10px;
+    flex-shrink: 0;
+}
+
+.product-admin-card .product-admin-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.product-admin-card .product-admin-info h4 {
+    color: #fff;
+    font-size: 16px;
+    margin-bottom: 4px;
+}
+
+.product-admin-card .product-admin-info p {
+    color: #aaa;
+    font-size: 13px;
+}
+
+.product-admin-card .product-admin-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    flex-shrink: 0;
+}
+
+.product-admin-card .product-admin-actions button {
+    padding: 6px 12px;
+    border: none;
+    border-radius: 10px;
+    font-size: 12px;
+    cursor: pointer;
+    font-weight: bold;
+}
+
+.product-admin-card .btn-edit {
+    background: #ffaf1f;
+    color: #111;
+}
+
+.product-admin-card .btn-toggle {
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
+}
+
+.product-admin-card .btn-delete {
+    background: rgba(255, 80, 80, 0.2);
+    color: #ff8080;
+}
+
 
 /* ---------- Reset a Customer's Password (admin page) ---------- */
 .reset-password-section {
