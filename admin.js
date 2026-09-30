@@ -456,4 +456,40 @@ function startAdminDashboard() {
         loadBookings();
     });
 
+    const resetPasswordForm = document.getElementById("resetPasswordForm");
+    const resetPasswordMessage = document.getElementById("resetPasswordMessage");
+
+    resetPasswordForm.addEventListener("submit", function (event) {
+
+        event.preventDefault();
+
+        const username = document.getElementById("resetUsername").value.trim();
+        const newPassword = document.getElementById("resetNewPassword").value;
+
+        resetPasswordMessage.textContent = "Resetting...";
+
+        fetch("/admin/reset-password", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+            body: JSON.stringify({ username, newPassword })
+        })
+            .then(response => response.json().then(data => ({ ok: response.ok, data })))
+            .then(({ ok, data }) => {
+
+                resetPasswordMessage.textContent = data.message;
+                resetPasswordMessage.style.color = ok ? "#4caf50" : "#ff6b6b";
+
+                if (ok) {
+                    resetPasswordForm.reset();
+                }
+
+            })
+            .catch(() => {
+                resetPasswordMessage.textContent = "Something went wrong. Please try again.";
+                resetPasswordMessage.style.color = "#ff6b6b";
+            });
+
+    });
+
 }

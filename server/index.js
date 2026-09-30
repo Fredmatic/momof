@@ -442,6 +442,63 @@ app.post("/create-admin", async (req, res) => {
 
 });
 
+// Admin-only: reset a customer's password directly, no email required.
+// This exists specifically because automated email isn't available on the
+// free Render plan -- the admin looks the customer up by username (having
+// verified who they are some other way, e.g. a phone call) and sets a new
+// password for them on the spot.
+app.post("/admin/reset-password", requireAdmin, async (req, res) => {
+
+    const { username, newPassword } = req.body;
+
+    if (!username || !newPassword) {
+        return res.status(400).json({
+            message: "A username and new password are required."
+        });
+    }
+
+    if (newPassword.length < 6) {
+        return res.status(400).json({
+            message: "Password must be at least 6 characters."
+        });
+    }
+
+    try {
+
+        const { data: user, error: findError } = await supabase
+            .from("users")
+            .select("username")
+            .eq("username", username)
+            .maybeSingle();
+
+        if (findError) throw findError;
+
+        if (!user) {
+            return res.status(404).json({
+                message: "No account found with that username."
+            });
+        }
+
+        const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+        const { error: updateError } = await supabase
+            .from("users")
+            .update({ password: hashedPassword })
+            .eq("username", username);
+
+        if (updateError) throw updateError;
+
+        res.json({
+            message: `Password updated for "${username}". Let them know their new password.`
+        });
+
+    } catch (error) {
+        console.error("Error resetting customer password:", error.message);
+        res.status(500).json({ message: "Something went wrong while resetting the password." });
+    }
+
+});
+
 app.listen(PORT, () => {
     console.log(`Server is running on http://localhost:${PORT}`);
 });
