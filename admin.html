@@ -120,7 +120,7 @@
 
         <section class="products-section">
             <h1>Manage Products</h1>
-            <p>Add products for the Products page. Add a photo to the images folder first, then type its filename below.
+            <p>Add products for the Products page. Upload a photo directly below -- no need to touch any files yourself.
             </p>
 
             <form id="productForm">
@@ -133,7 +133,12 @@
 
                 <input type="number" id="productPrice" placeholder="Price (UGX)" min="0" required>
 
-                <input type="text" id="productImage" placeholder="Image filename (e.g. product1.jpg)">
+                <label class="photo-upload-label">
+                    Product photo (optional)
+                    <input type="file" id="productImageFile" accept="image/*">
+                </label>
+
+                <img id="productImagePreview" alt="Current product photo" style="display:none;">
 
                 <label class="hide-done-label">
                     <input type="checkbox" id="productInStock" checked>

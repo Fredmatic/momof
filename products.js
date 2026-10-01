@@ -9,6 +9,14 @@ function whatsappLink(productName) {
     return "https://wa.me/256766513833?text=" + encodeURIComponent(message);
 }
 
+function resolveProductImageSrc(image) {
+    if (!image) return "images/image.jpg";
+    // Old products (added before photo upload existed) stored just a
+    // filename like "product1.jpg"; new ones store a full Supabase
+    // Storage URL. Handle both.
+    return image.startsWith("http") ? image : `images/${image}`;
+}
+
 function renderProducts(products) {
 
     if (products.length === 0) {
@@ -19,7 +27,7 @@ function renderProducts(products) {
 
     productsContainer.innerHTML = products.map(product => {
 
-        const imageSrc = product.image ? `images/${product.image}` : "images/image.jpg";
+        const imageSrc = resolveProductImageSrc(product.image);
 
         const actionHtml = product.in_stock
             ? `<a class="wa-btn" href="${whatsappLink(product.name)}" target="_blank" rel="noopener">Ask on WhatsApp</a>`

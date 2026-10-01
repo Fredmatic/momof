@@ -4,10 +4,67 @@ const path = require("path");
 const express = require("express");
 const cors = require("cors");
 const session = require("express-session");
+const pgSession = require("connect-pg-simple")(session);
+const { Pool } = require("pg");
 const rateLimit = require("express-rate-limit");
 const bcrypt = require("bcrypt");
+const multer = require("multer");
 const supabase = require("./supabaseClient");
 const { sendBookingReceivedEmail, sendAdminNewBookingEmail, sendBookingStatusEmail } = require("./mailer");
+
+// Accepts one uploaded image file at a time, kept in memory just long
+// enough to hand off to Supabase Storage (never written to disk).
+const upload = multer({
+    storage: multer.memoryStorage(),
+    limits: { fileSize: 5 * 1024 * 1024 }, // 5 MB
+    fileFilter: (req, file, cb) => {
+        if (file.mimetype.startsWith("image/")) {
+            cb(null, true);
+        } else {
+            cb(new Error("Only image files are allowed."));
+        }
+    }
+});
+
+const STORAGE_BUCKET = "site-uploads";
+
+// Creates the bucket the first time the server ever starts against a given
+// Supabase project. Safe to run on every startup -- if it already exists,
+// Supabase just returns an error we quietly ignore.
+async function ensureStorageBucket() {
+    const { error } = await supabase.storage.createBucket(STORAGE_BUCKET, {
+        public: true,
+        fileSizeLimit: "5MB"
+    });
+
+    if (error && !String(error.message).toLowerCase().includes("already exists")) {
+        console.error("Could not set up the storage bucket:", error.message);
+    }
+}
+ensureStorageBucket();
+
+// Uploads one file buffer to Supabase Storage under the given folder and
+// returns its public URL, or null if no file was provided. Throws on a
+// real storage error so the calling route's try/catch can handle it.
+async function uploadImage(file, folder) {
+
+    if (!file) {
+        return null;
+    }
+
+    const safeName = file.originalname.replace(/[^a-zA-Z0-9.\-_]/g, "_");
+    const path = `${folder}/${Date.now()}-${safeName}`;
+
+    const { error } = await supabase.storage
+        .from(STORAGE_BUCKET)
+        .upload(path, file.buffer, { contentType: file.mimetype });
+
+    if (error) throw error;
+
+    const { data } = supabase.storage.from(STORAGE_BUCKET).getPublicUrl(path);
+
+    return data.publicUrl;
+}
 
 const app = express();
 
@@ -27,7 +84,38 @@ app.use(express.json());
 
 app.set("trust proxy", 1); // needed so secure cookies work correctly on Render
 
+// Sessions are stored in Postgres (the same Supabase database everything
+// else uses) whenever DATABASE_URL is set, so logins survive server
+// restarts, redeploys, and Render's free-tier spin-downs. Without
+// DATABASE_URL, it falls back to the default in-memory store (fine for
+// quick local testing, but everyone gets logged out on every restart).
+let sessionStore;
+
+if (process.env.DATABASE_URL) {
+
+    const pgPool = new Pool({
+        connectionString: process.env.DATABASE_URL,
+        ssl: { rejectUnauthorized: false } // required for Supabase's Postgres
+    });
+
+    sessionStore = new pgSession({
+        pool: pgPool,
+        tableName: "user_sessions",
+        createTableIfMissing: true
+    });
+
+    console.log("Sessions are stored in Postgres (persistent across restarts).");
+
+} else {
+    console.log(
+        "DATABASE_URL is not set -- using in-memory sessions. " +
+        "Everyone will be logged out whenever the server restarts. " +
+        "See the \"Persistent sessions\" section in README.md to fix this."
+    );
+}
+
 app.use(session({
+    store: sessionStore, // undefined falls back to express-session's default MemoryStore
     secret: SESSION_SECRET,
     resave: false,
     saveUninitialized: false,
@@ -83,7 +171,7 @@ app.get("/api/status", (req, res) => {
     res.send("MOMO's PALOR server is running!");
 });
 
-app.post("/bookings", async (req, res) => {
+app.post("/bookings", upload.single("photo"), async (req, res) => {
 
     const booking = req.body;
 
@@ -106,6 +194,10 @@ app.post("/bookings", async (req, res) => {
             });
         }
 
+        // Reference photos live in their own folder, named with the
+        // booking reference so they're easy to find in Supabase Storage.
+        const photoUrl = await uploadImage(req.file, `bookings/${booking.reference}`);
+
         const { error: insertError } = await supabase
             .from("bookings")
             .insert({
@@ -117,6 +209,7 @@ app.post("/bookings", async (req, res) => {
                 name: booking.name,
                 phone: booking.phone,
                 email: booking.email || null,
+                photo_url: photoUrl,
                 status: booking.status || "pending",
                 username: req.session.user ? req.session.user.username : null
             });
@@ -467,9 +560,18 @@ app.get("/products", async (req, res) => {
 });
 
 // Admin-only: add a new product.
-app.post("/products", requireAdmin, async (req, res) => {
+// Converts "true"/"false" strings (from multipart form uploads) and real
+// booleans (from the plain-JSON toggle-stock button) into an actual
+// boolean, so either client can use this route correctly.
+function parseBool(value, fallback) {
+    if (value === undefined) return fallback;
+    if (typeof value === "boolean") return value;
+    return value === "true";
+}
 
-    const { name, description, price, image, in_stock } = req.body;
+app.post("/products", requireAdmin, upload.single("image"), async (req, res) => {
+
+    const { name, description, price } = req.body;
 
     if (!name || price === undefined || price === null || price === "") {
         return res.status(400).json({
@@ -479,14 +581,16 @@ app.post("/products", requireAdmin, async (req, res) => {
 
     try {
 
+        const imageUrl = await uploadImage(req.file, "products");
+
         const { data, error } = await supabase
             .from("products")
             .insert({
                 name,
                 description: description || null,
-                price,
-                image: image || null,
-                in_stock: in_stock !== false
+                price: Number(price),
+                image: imageUrl,
+                in_stock: parseBool(req.body.in_stock, true)
             })
             .select()
             .single();
@@ -504,20 +608,28 @@ app.post("/products", requireAdmin, async (req, res) => {
 
 // Admin-only: update any fields on an existing product (name, price,
 // description, image, or in_stock -- e.g. to mark something as
-// out-of-stock without deleting it).
-app.patch("/products/:id", requireAdmin, async (req, res) => {
+// out-of-stock without deleting it). Handles both a plain JSON request
+// (the quick "toggle stock" button) and a multipart request with a new
+// image file (the edit form).
+app.patch("/products/:id", requireAdmin, upload.single("image"), async (req, res) => {
 
     const { id } = req.params;
-    const { name, description, price, image, in_stock } = req.body;
+    const { name, description, price } = req.body;
 
     const updates = {};
     if (name !== undefined) updates.name = name;
     if (description !== undefined) updates.description = description;
-    if (price !== undefined) updates.price = price;
-    if (image !== undefined) updates.image = image;
-    if (in_stock !== undefined) updates.in_stock = in_stock;
+    if (price !== undefined) updates.price = Number(price);
+    if (req.body.in_stock !== undefined) updates.in_stock = parseBool(req.body.in_stock);
 
     try {
+
+        // Only replace the image if a new file was actually uploaded --
+        // otherwise leave whatever's already stored untouched.
+        const newImageUrl = await uploadImage(req.file, "products");
+        if (newImageUrl) {
+            updates.image = newImageUrl;
+        }
 
         const { data, error } = await supabase
             .from("products")
@@ -541,12 +653,19 @@ app.patch("/products/:id", requireAdmin, async (req, res) => {
 
 });
 
-// Admin-only: permanently remove a product.
+// Admin-only: permanently remove a product (and its stored photo, if it
+// has one, to avoid leaving orphaned files in storage).
 app.delete("/products/:id", requireAdmin, async (req, res) => {
 
     const { id } = req.params;
 
     try {
+
+        const { data: product } = await supabase
+            .from("products")
+            .select("image")
+            .eq("id", id)
+            .maybeSingle();
 
         const { error } = await supabase
             .from("products")
@@ -554,6 +673,11 @@ app.delete("/products/:id", requireAdmin, async (req, res) => {
             .eq("id", id);
 
         if (error) throw error;
+
+        if (product && product.image && product.image.includes(`/${STORAGE_BUCKET}/`)) {
+            const storagePath = product.image.split(`/${STORAGE_BUCKET}/`)[1];
+            await supabase.storage.from(STORAGE_BUCKET).remove([storagePath]);
+        }
 
         res.json({ message: "Product deleted." });
 

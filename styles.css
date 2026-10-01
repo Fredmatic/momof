@@ -534,6 +534,19 @@ body {
     outline: none;
 }
 
+.photo-upload-label {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    color: #ccc;
+    font-size: 13px;
+}
+
+.photo-upload-label input[type="file"] {
+    color: #ccc;
+    font-size: 13px;
+}
+
 #bookingForm button {
     padding: 13px;
     border: 2px solid #ffaf1f;
@@ -582,6 +595,15 @@ body {
     display: flex;
     flex-direction: column;
     gap: 20px;
+}
+
+.booking-photo-thumb {
+    max-width: 90px;
+    max-height: 90px;
+    border-radius: 10px;
+    margin-top: 6px;
+    object-fit: cover;
+    border: 1px solid rgba(255, 175, 31, 0.4);
 }
 
 .booking-card {
@@ -983,6 +1005,14 @@ body {
     font-size: 16px;
     cursor: pointer;
     transition: 0.3s;
+}
+
+#productImagePreview {
+    width: 100px;
+    height: 100px;
+    object-fit: cover;
+    border-radius: 12px;
+    border: 1px solid rgba(255, 175, 31, 0.4);
 }
 
 #productForm button:hover {

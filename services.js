@@ -132,28 +132,31 @@ bookingForm.addEventListener("submit", function (event) {
     const customerName = document.getElementById("customerName").value;
     const customerPhone = document.getElementById("customerPhone").value;
     const customerEmail = document.getElementById("customerEmail").value;
+    const customerPhoto = document.getElementById("customerPhoto").files[0];
 
     const bookingReference =
         "MP-" + Math.floor(10000 + Math.random() * 90000);
 
+    const formData = new FormData();
+    formData.append("service", selectedServiceName);
+    formData.append("price", selectedServicePrice);
+    formData.append("date", bookingDate);
+    formData.append("time", bookingTime);
+    formData.append("name", customerName);
+    formData.append("phone", customerPhone);
+    formData.append("email", customerEmail);
+    formData.append("reference", bookingReference);
+    formData.append("status", "pending");
+
+    if (customerPhoto) {
+        formData.append("photo", customerPhoto);
+    }
+
     fetch("/bookings", {
         method: "POST",
-
-        headers: {
-            "Content-Type": "application/json"
-        },
-
-        body: JSON.stringify({
-            service: selectedServiceName,
-            price: selectedServicePrice,
-            date: bookingDate,
-            time: bookingTime,
-            name: customerName,
-            phone: customerPhone,
-            email: customerEmail,
-            reference: bookingReference,
-            status: "pending"
-        })
+        // No Content-Type header here -- the browser sets the correct
+        // multipart boundary automatically when the body is a FormData.
+        body: formData
     })
         .then(response => {
 

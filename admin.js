@@ -74,6 +74,7 @@ function showBookings(bookings) {
             <p>Customer: ${booking.name}</p>
             <p>Phone: ${booking.phone}</p>
             ${booking.email ? `<p>Email: ${booking.email}</p>` : ""}
+            ${booking.photo_url ? `<p>Reference photo: <a href="${booking.photo_url}" target="_blank" rel="noopener"><img src="${booking.photo_url}" alt="Customer's reference photo" class="booking-photo-thumb"></a></p>` : ""}
 
             <p>
                 Status:
@@ -498,6 +499,14 @@ function startAdminDashboard() {
 
 // ---------- Product management ----------
 
+function resolveProductImageSrc(image) {
+    if (!image) return "images/image.jpg";
+    // Old products (added before photo upload existed) stored just a
+    // filename like "product1.jpg"; new ones store a full Supabase
+    // Storage URL. Handle both.
+    return image.startsWith("http") ? image : `images/${image}`;
+}
+
 function startProductManager() {
 
     const productForm = document.getElementById("productForm");
@@ -510,13 +519,15 @@ function startProductManager() {
     const productName = document.getElementById("productName");
     const productDescription = document.getElementById("productDescription");
     const productPrice = document.getElementById("productPrice");
-    const productImage = document.getElementById("productImage");
+    const productImageFile = document.getElementById("productImageFile");
+    const productImagePreview = document.getElementById("productImagePreview");
     const productInStock = document.getElementById("productInStock");
 
     function resetForm() {
         productForm.reset();
         productId.value = "";
         productInStock.checked = true;
+        productImagePreview.style.display = "none";
         productFormSubmit.textContent = "Add Product";
         productFormCancel.style.display = "none";
     }
@@ -534,7 +545,7 @@ function startProductManager() {
 
                 productsAdminList.innerHTML = products.map(product => {
 
-                    const imageSrc = product.image ? `images/${product.image}` : "images/image.jpg";
+                    const imageSrc = resolveProductImageSrc(product.image);
 
                     return `
                         <div class="product-admin-card">
@@ -567,8 +578,15 @@ function startProductManager() {
                         productName.value = product.name;
                         productDescription.value = product.description || "";
                         productPrice.value = product.price;
-                        productImage.value = product.image || "";
+                        productImageFile.value = ""; // can't prefill a file input -- only a new upload replaces it
                         productInStock.checked = product.in_stock;
+
+                        if (product.image) {
+                            productImagePreview.src = resolveProductImageSrc(product.image);
+                            productImagePreview.style.display = "inline-block";
+                        } else {
+                            productImagePreview.style.display = "none";
+                        }
 
                         productFormSubmit.textContent = "Update Product";
                         productFormCancel.style.display = "inline-block";
@@ -618,28 +636,28 @@ function startProductManager() {
 
         event.preventDefault();
 
-        const payload = {
-            name: productName.value.trim(),
-            description: productDescription.value.trim(),
-            price: Number(productPrice.value),
-            image: productImage.value.trim(),
-            in_stock: productInStock.checked
-        };
+        const formData = new FormData();
+        formData.append("name", productName.value.trim());
+        formData.append("description", productDescription.value.trim());
+        formData.append("price", productPrice.value);
+        formData.append("in_stock", productInStock.checked);
+
+        if (productImageFile.files[0]) {
+            formData.append("image", productImageFile.files[0]);
+        }
 
         const isEditing = Boolean(productId.value);
 
         const request = isEditing
             ? fetch(`/products/${productId.value}`, {
                 method: "PATCH",
-                headers: { "Content-Type": "application/json" },
                 credentials: "include",
-                body: JSON.stringify(payload)
+                body: formData
             })
             : fetch("/products", {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
                 credentials: "include",
-                body: JSON.stringify(payload)
+                body: formData
             });
 
         productMessage.textContent = isEditing ? "Updating..." : "Adding...";
