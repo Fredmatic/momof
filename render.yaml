@@ -16,3 +16,9 @@ services:
         sync: false
       - key: CLIENT_ORIGIN
         sync: false
+      - key: FLW_SECRET_KEY
+        sync: false
+      - key: FLW_WEBHOOK_HASH
+        sync: false
+      - key: PUBLIC_URL
+        sync: false

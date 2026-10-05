@@ -4,10 +4,42 @@ const bookingModal = document.getElementById("bookingModal");
 const closeBooking = document.getElementById("closeBooking")
 const selectedService = document.getElementById("selectedService")
 const serviceButtons = document.querySelectorAll(".service-card button")
+
+// ---------- Online payment options ----------
+// The server says whether payments are switched on. If not, the booking
+// form works exactly as it always did.
+let paymentsEnabled = false;
+const paymentOptions = document.getElementById("paymentOptions");
+const bookingSubmit = document.getElementById("bookingSubmit");
+const customerEmailInput = document.getElementById("customerEmail");
+
+fetch("/api/payments/config")
+    .then(response => response.json())
+    .then(config => {
+        paymentsEnabled = Boolean(config.enabled);
+
+        if (paymentsEnabled) {
+            paymentOptions.style.display = "block";
+            bookingSubmit.textContent = "Continue to Payment";
+            customerEmailInput.required = true;
+            customerEmailInput.placeholder = "Email (for your payment receipt)";
+        }
+    })
+    .catch(() => { /* leave payments off if the server can't say */ });
+
+// Shows what each choice costs for the service that was clicked.
+function updatePaymentAmounts() {
+    [50, 75, 100].forEach(percent => {
+        const el = document.getElementById("payAmount" + percent);
+        el.textContent = "Pay UGX " + Math.round(Number(selectedServicePrice) * percent / 100).toLocaleString("en-US") + " now";
+    });
+}
+
 serviceButtons.forEach(button => {
     button.addEventListener("click", function () {
         selectedServiceName = button.dataset.service;
         selectedServicePrice = button.dataset.price;
+        updatePaymentAmounts();
 
         // localStorage.setItem("service", serviceName)
         // localStorage.setItem("price", servicePrice)
@@ -152,6 +184,13 @@ bookingForm.addEventListener("submit", function (event) {
         formData.append("photo", customerPhoto);
     }
 
+    if (paymentsEnabled) {
+        const chosen = document.querySelector('input[name="payPercent"]:checked');
+        formData.append("payment_percent", chosen ? chosen.value : "50");
+        bookingSubmit.disabled = true;
+        bookingSubmit.textContent = "Please wait...";
+    }
+
     fetch("/bookings", {
         method: "POST",
         // No Content-Type header here -- the browser sets the correct
@@ -173,6 +212,12 @@ bookingForm.addEventListener("submit", function (event) {
 
             console.log(data);
 
+            // Payments on: the slot is now held, so go and pay.
+            if (data.paymentLink) {
+                window.location.href = data.paymentLink;
+                return;
+            }
+
             bookingConfirmation.style.display = "block";
             bookingForm.style.display = "none";
 
@@ -190,6 +235,11 @@ bookingForm.addEventListener("submit", function (event) {
             console.error("Booking failed:", error);
             alert(error.message);
             loadTimeSlots(); // someone may have just taken that slot
+
+            if (paymentsEnabled) {
+                bookingSubmit.disabled = false;
+                bookingSubmit.textContent = "Continue to Payment";
+            }
         });
 });
 
@@ -242,14 +292,22 @@ checkBooking.addEventListener("click", function () {
                     <p>
                         Status:
                         <span class="booking-status ${booking.status}">
-                            ${booking.status}
+                            ${prettyStatus(booking.status)}
                         </span>
                     </p>
+
+                    ${paymentInfoHtml(booking)}
+
+                    ${booking.status === "awaiting_payment" ? payNowHtml(booking.total_amount) : ""}
 
                     ${booking.status === "completed" ? renderReviewForm(booking.reference) : ""}
 
                 </div>
             `;
+
+            if (booking.status === "awaiting_payment") {
+                wirePayNow(bookingResult, booking.reference);
+            }
 
             if (booking.status === "completed") {
                 wireUpReviewForm(booking.reference);

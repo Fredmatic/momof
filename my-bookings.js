@@ -38,12 +38,23 @@
                     <p>
                         Status:
                         <span class="booking-status ${booking.status}">
-                            ${booking.status}
+                            ${prettyStatus(booking.status)}
                         </span>
                     </p>
 
+                    ${paymentInfoHtml(booking)}
+
+                    ${booking.status === "awaiting_payment" ? payNowHtml(booking.total_amount) : ""}
+
                 </div>
             `).join("");
+
+            // Hook up the "pay now" buttons on any unpaid bookings.
+            list.querySelectorAll(".booking-card").forEach((card, index) => {
+                if (bookings[index].status === "awaiting_payment") {
+                    wirePayNow(card, bookings[index].reference);
+                }
+            });
 
         })
         .catch(error => {

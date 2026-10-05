@@ -72,6 +72,26 @@ async function send({ to, subject, html }) {
     }
 }
 
+function ugx(amount) {
+    return "UGX " + Number(amount).toLocaleString("en-US");
+}
+
+// Payment lines are only shown for bookings that were paid for online.
+function paymentSummaryHtml(booking) {
+
+    if (!booking.total_amount || !Number(booking.amount_paid)) {
+        return "";
+    }
+
+    const balance = Math.max(0, Number(booking.total_amount) - Number(booking.amount_paid));
+
+    return `
+        <p><strong>Total price:</strong> ${ugx(booking.total_amount)}</p>
+        <p><strong>Paid online:</strong> ${ugx(booking.amount_paid)}</p>
+        <p><strong>${balance > 0 ? "Balance to pay at the salon" : "Balance"}:</strong> ${balance > 0 ? ugx(balance) : "None -- fully paid"}</p>
+    `;
+}
+
 function bookingSummaryHtml(booking) {
     return `
         <p><strong>Reference:</strong> ${booking.reference}</p>
@@ -80,6 +100,7 @@ function bookingSummaryHtml(booking) {
         <p><strong>Time:</strong> ${booking.time}</p>
         <p><strong>Name:</strong> ${booking.name}</p>
         <p><strong>Phone:</strong> ${booking.phone}</p>
+        ${paymentSummaryHtml(booking)}
     `;
 }
 
@@ -90,7 +111,7 @@ async function sendBookingReceivedEmail(booking) {
         subject: `We've received your booking - ${booking.reference}`,
         html: `
             <h2>Thanks, ${booking.name}!</h2>
-            <p>Your booking at MOMO's PALOR has been received and is <strong>pending confirmation</strong>.</p>
+            <p>Your booking at MOMO's PALOR has been received${Number(booking.amount_paid) ? ", your payment went through," : ""} and is <strong>pending confirmation</strong>.</p>
             ${bookingSummaryHtml(booking)}
             <p>We'll email you again as soon as it's confirmed.</p>
         `

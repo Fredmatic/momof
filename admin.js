@@ -55,6 +55,24 @@ function formatUGX(amount) {
 
 
 
+// Online payment summary for a booking card. Empty for bookings that were
+// not paid for online.
+function adminPaymentLine(booking) {
+
+    const total = Number(booking.total_amount);
+    const paid = Number(booking.amount_paid || 0);
+
+    if (!total || !paid) return "";
+
+    const balance = Math.max(0, total - paid);
+
+    return `<p>Paid online: UGX ${paid.toLocaleString("en-US")} ` +
+        (balance > 0
+            ? `(balance to collect: UGX ${balance.toLocaleString("en-US")})`
+            : `(fully paid)`) +
+        `</p>`;
+}
+
 function showBookings(bookings) {
 
     bookingsList.innerHTML = "";
@@ -69,6 +87,7 @@ function showBookings(bookings) {
             <h3>${booking.service}</h3>
             <p>Reference: ${booking.reference}</p>
             <p>Price: UGX ${booking.price}</p>
+            ${adminPaymentLine(booking)}
             <p>Date: ${booking.date}</p>
             <p>Time: ${booking.time}</p>
             <p>Customer: ${booking.name}</p>

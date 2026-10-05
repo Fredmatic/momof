@@ -108,7 +108,41 @@
                     <input type="file" id="customerPhoto" accept="image/*">
                 </label>
 
-                <button type="submit">Confirm Booking</button>
+                <div class="payment-options" id="paymentOptions" style="display: none;">
+
+                    <p class="payment-title">Pay now to secure your booking</p>
+
+                    <label class="pay-option">
+                        <input type="radio" name="payPercent" value="50" checked>
+                        <span class="pay-option-text">
+                            <strong>50% deposit</strong>
+                            <small id="payAmount50"></small>
+                        </span>
+                    </label>
+
+                    <label class="pay-option">
+                        <input type="radio" name="payPercent" value="75">
+                        <span class="pay-option-text">
+                            <strong>75% deposit</strong>
+                            <small id="payAmount75"></small>
+                        </span>
+                    </label>
+
+                    <label class="pay-option">
+                        <input type="radio" name="payPercent" value="100">
+                        <span class="pay-option-text">
+                            <strong>Pay in full</strong>
+                            <small id="payAmount100"></small>
+                        </span>
+                    </label>
+
+                    <p class="payment-note">
+                        You'll pay securely with card or mobile money. Any balance is paid at the salon.
+                    </p>
+
+                </div>
+
+                <button type="submit" id="bookingSubmit">Confirm Booking</button>
 
             </form>
 
@@ -145,6 +179,7 @@
     <script src="loader.js"></script>
     <script src="script.js"></script>
     <script src="logout.js"></script>
+    <script src="payment-ui.js"></script>
     <script src="services.js"></script>
 
 </body>

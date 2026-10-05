@@ -25,12 +25,23 @@ create table if not exists bookings (
     photo_url text, -- customer's optional reference photo (style they want)
     status text not null default 'pending',
     username text,
+    -- Online payment (Flutterwave). Amounts are in UGX.
+    total_amount numeric(12, 0), -- full price, set by the server
+    payment_percent integer, -- share the customer chose to pay now (50-100)
+    amount_due numeric(12, 0), -- amount requested in the latest payment attempt
+    amount_paid numeric(12, 0) not null default 0, -- what has actually been received
+    payment_status text not null default 'unpaid', -- unpaid | partial | paid
+    payment_tx_ref text, -- latest Flutterwave transaction reference
+    payment_transaction_id text, -- Flutterwave's id for the successful payment
     created_at timestamptz not null default now()
 );
 
 -- Run this on its own in Supabase's SQL Editor if your bookings table
 -- already exists and just needs the new photo_url column added:
 -- alter table bookings add column if not exists photo_url text;
+
+-- ALREADY HAVE A bookings TABLE? Run supabase/add-payments.sql once to add the
+-- online-payment columns above without touching your existing data.
 
 create table if not exists products (
     id uuid primary key default gen_random_uuid (),
