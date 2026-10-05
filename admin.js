@@ -494,6 +494,7 @@ function startAdminDashboard() {
     });
 
     startProductManager();
+    startReviewManager();
 
 }
 
@@ -689,5 +690,86 @@ function startProductManager() {
     productFormCancel.addEventListener("click", resetForm);
 
     loadProducts();
+
+}
+
+// ---------- Review moderation ----------
+
+function starsHtml(rating) {
+    return Array.from({ length: 5 }, (_, i) =>
+        `<i class="${i < rating ? "fas" : "far"} fa-star"></i>`
+    ).join("");
+}
+
+function startReviewManager() {
+
+    const reviewsAdminList = document.getElementById("reviewsAdminList");
+
+    function loadReviews() {
+
+        fetch("/reviews", { credentials: "include" })
+            .then(response => response.json())
+            .then(reviews => {
+
+                if (reviews.length === 0) {
+                    reviewsAdminList.innerHTML = '<p class="empty-message">No reviews yet.</p>';
+                    return;
+                }
+
+                reviewsAdminList.innerHTML = reviews.map(review => `
+                    <div class="review-admin-card">
+                        <div class="review-admin-stars">${starsHtml(review.rating)}</div>
+                        <div class="review-admin-meta">
+                            ${review.customer_name} -- booking ${review.booking_reference} --
+                            ${review.approved ? "Approved" : "Pending approval"}
+                        </div>
+                        ${review.comment ? `<div class="review-admin-comment">"${review.comment}"</div>` : ""}
+                        <div class="review-admin-actions">
+                            ${review.approved
+                        ? `<button class="btn-unapprove" data-id="${review.id}">Unapprove</button>`
+                        : `<button class="btn-approve" data-id="${review.id}">Approve</button>`
+                    }
+                            <button class="btn-delete" data-id="${review.id}">Delete</button>
+                        </div>
+                    </div>
+                `).join("");
+
+                reviewsAdminList.querySelectorAll(".btn-approve, .btn-unapprove").forEach(button => {
+                    button.addEventListener("click", function () {
+
+                        const approve = button.classList.contains("btn-approve");
+
+                        fetch(`/reviews/${button.dataset.id}`, {
+                            method: "PATCH",
+                            headers: { "Content-Type": "application/json" },
+                            credentials: "include",
+                            body: JSON.stringify({ approved: approve })
+                        })
+                            .then(() => loadReviews());
+
+                    });
+                });
+
+                reviewsAdminList.querySelectorAll(".btn-delete").forEach(button => {
+                    button.addEventListener("click", function () {
+
+                        if (!confirm("Delete this review? This can't be undone.")) {
+                            return;
+                        }
+
+                        fetch(`/reviews/${button.dataset.id}`, {
+                            method: "DELETE",
+                            credentials: "include"
+                        })
+                            .then(() => loadReviews());
+
+                    });
+                });
+
+            });
+
+    }
+
+    loadReviews();
 
 }

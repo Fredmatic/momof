@@ -16,7 +16,7 @@ const { sendBookingReceivedEmail, sendAdminNewBookingEmail, sendBookingStatusEma
 // enough to hand off to Supabase Storage (never written to disk).
 const upload = multer({
     storage: multer.memoryStorage(),
-    limits: { fileSize: 5 * 1024 * 1024 }, // 5 MB
+    limits: { fileSize: 3 * 1024 * 1024 }, // 3 MB -- stays safely under limits some hosts impose at the proxy level
     fileFilter: (req, file, cb) => {
         if (file.mimetype.startsWith("image/")) {
             cb(null, true);
@@ -274,6 +274,165 @@ app.get("/bookings/status/:reference", async (req, res) => {
     }
 
     res.json(data);
+
+});
+
+// Public: a customer leaves a review for one of their own completed
+// bookings, found by reference (same pattern as checking booking status --
+// no login required). One review per booking, enforced by the database's
+// unique constraint on booking_reference.
+app.post("/reviews", async (req, res) => {
+
+    const { reference, rating, comment } = req.body;
+
+    const ratingNumber = Number(rating);
+
+    if (!reference || !ratingNumber || ratingNumber < 1 || ratingNumber > 5) {
+        return res.status(400).json({
+            message: "A booking reference and a rating from 1 to 5 are required."
+        });
+    }
+
+    try {
+
+        const { data: booking, error: findError } = await supabase
+            .from("bookings")
+            .select("name, status")
+            .eq("reference", reference.toUpperCase())
+            .maybeSingle();
+
+        if (findError) throw findError;
+
+        if (!booking) {
+            return res.status(404).json({ message: "Booking not found." });
+        }
+
+        if (booking.status !== "completed") {
+            return res.status(400).json({
+                message: "You can only leave a review once this booking is marked completed."
+            });
+        }
+
+        const { error: insertError } = await supabase
+            .from("reviews")
+            .insert({
+                booking_reference: reference.toUpperCase(),
+                customer_name: booking.name,
+                rating: ratingNumber,
+                comment: comment || null
+            });
+
+        if (insertError) {
+
+            // Postgres error code 23505 = unique constraint violation.
+            if (insertError.code === "23505") {
+                return res.status(409).json({
+                    message: "You've already reviewed this booking. Thank you!"
+                });
+            }
+
+            throw insertError;
+        }
+
+        res.json({
+            message: "Thanks for your review! It'll appear on our site once approved."
+        });
+
+    } catch (error) {
+        console.error("Error submitting review:", error.message);
+        res.status(500).json({ message: "Something went wrong while submitting your review." });
+    }
+
+});
+
+// Public: approved reviews only, newest first -- for the home page.
+app.get("/reviews/approved", async (req, res) => {
+
+    try {
+
+        const { data, error } = await supabase
+            .from("reviews")
+            .select("*")
+            .eq("approved", true)
+            .order("created_at", { ascending: false });
+
+        if (error) throw error;
+
+        res.json(data);
+
+    } catch (error) {
+        console.error("Error fetching approved reviews:", error.message);
+        res.status(500).json({ message: "Something went wrong while loading reviews." });
+    }
+
+});
+
+// Admin-only: every review, pending or approved, for the moderation list.
+app.get("/reviews", requireAdmin, async (req, res) => {
+
+    try {
+
+        const { data, error } = await supabase
+            .from("reviews")
+            .select("*")
+            .order("created_at", { ascending: false });
+
+        if (error) throw error;
+
+        res.json(data);
+
+    } catch (error) {
+        console.error("Error fetching reviews:", error.message);
+        res.status(500).json({ message: "Something went wrong while loading reviews." });
+    }
+
+});
+
+// Admin-only: approve or un-approve a review.
+app.patch("/reviews/:id", requireAdmin, async (req, res) => {
+
+    try {
+
+        const { data, error } = await supabase
+            .from("reviews")
+            .update({ approved: req.body.approved })
+            .eq("id", req.params.id)
+            .select()
+            .maybeSingle();
+
+        if (error) throw error;
+
+        if (!data) {
+            return res.status(404).json({ message: "Review not found." });
+        }
+
+        res.json(data);
+
+    } catch (error) {
+        console.error("Error updating review:", error.message);
+        res.status(500).json({ message: "Something went wrong while updating the review." });
+    }
+
+});
+
+// Admin-only: permanently remove a review (e.g. spam or inappropriate content).
+app.delete("/reviews/:id", requireAdmin, async (req, res) => {
+
+    try {
+
+        const { error } = await supabase
+            .from("reviews")
+            .delete()
+            .eq("id", req.params.id);
+
+        if (error) throw error;
+
+        res.json({ message: "Review deleted." });
+
+    } catch (error) {
+        console.error("Error deleting review:", error.message);
+        res.status(500).json({ message: "Something went wrong while deleting the review." });
+    }
 
 });
 
@@ -742,6 +901,25 @@ app.post("/admin/reset-password", requireAdmin, async (req, res) => {
         console.error("Error resetting customer password:", error.message);
         res.status(500).json({ message: "Something went wrong while resetting the password." });
     }
+
+});
+
+// Catches file-upload errors (oversized file, wrong file type) from any
+// route using `upload`, and returns a clean JSON message instead of
+// Express's default HTML error page or a generic connection failure.
+app.use((error, req, res, next) => {
+
+    if (error instanceof multer.MulterError && error.code === "LIMIT_FILE_SIZE") {
+        return res.status(413).json({
+            message: "That photo is too large. Please use one under 3MB."
+        });
+    }
+
+    if (error && error.message === "Only image files are allowed.") {
+        return res.status(400).json({ message: error.message });
+    }
+
+    next(error);
 
 });
 

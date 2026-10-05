@@ -278,6 +278,40 @@ body {
     gap: 25px;
 }
 
+.reviews-container {
+    display: flex;
+    justify-content: center;
+    gap: 25px;
+    flex-wrap: wrap;
+}
+
+.review-card {
+    width: 280px;
+    padding: 30px 20px;
+    background: rgba(0, 0, 0, 0.55);
+    border: 1px solid rgba(255, 175, 31, 0.5);
+    border-radius: 20px;
+    text-align: center;
+}
+
+.review-stars {
+    color: #ffaf1f;
+    font-size: 18px;
+    margin-bottom: 15px;
+}
+
+.review-comment-text {
+    color: #ddd;
+    font-style: italic;
+    margin-bottom: 15px;
+    line-height: 1.5;
+}
+
+.review-author {
+    color: #ffaf1f;
+    font-weight: bold;
+}
+
 .why-card {
     width: 280px;
     padding: 30px 20px;
@@ -825,6 +859,69 @@ body {
     border-color: #ffaf1f;
 }
 
+.review-form {
+    margin-top: 20px;
+    padding-top: 15px;
+    border-top: 1px solid rgba(255, 175, 31, 0.3);
+    text-align: left;
+}
+
+.review-form>p:first-child {
+    color: #ffaf1f;
+    font-weight: bold;
+    margin-bottom: 10px;
+}
+
+.star-picker {
+    font-size: 26px;
+    color: #ffaf1f;
+    margin-bottom: 12px;
+    cursor: pointer;
+}
+
+.star-picker i {
+    margin-right: 6px;
+    transition: transform 0.15s;
+}
+
+.star-picker i:hover {
+    transform: scale(1.15);
+}
+
+.review-comment {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 12px;
+    border: 1px solid rgba(255, 175, 31, 0.5);
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.08);
+    color: #fff;
+    font-family: inherit;
+    resize: vertical;
+    margin-bottom: 12px;
+}
+
+.submit-review-btn {
+    padding: 10px 20px;
+    border: 2px solid #ffaf1f;
+    border-radius: 20px;
+    background: #ffaf1f;
+    color: #111;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.submit-review-btn:hover {
+    background: transparent;
+    color: #ffaf1f;
+}
+
+.review-message {
+    margin-top: 10px;
+    color: #ffd76a;
+    font-size: 14px;
+}
+
 #checkBooking {
     padding: 13px 22px;
     border: 2px solid #ffaf1f;
@@ -1111,6 +1208,83 @@ body {
     color: #ff8080;
 }
 
+
+/* ---------- Manage Reviews (admin page) ---------- */
+.reviews-section {
+    padding: 50px 40px;
+    max-width: 650px;
+    margin: 0 auto;
+    text-align: center;
+}
+
+.reviews-section h1 {
+    color: #ffaf1f;
+    margin-bottom: 8px;
+}
+
+.reviews-section>p {
+    color: #ccc;
+    margin-bottom: 25px;
+}
+
+#reviewsAdminList {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    text-align: left;
+}
+
+.review-admin-card {
+    padding: 16px 20px;
+    border: 1px solid rgba(255, 175, 31, 0.3);
+    border-radius: 15px;
+    background: rgba(0, 0, 0, 0.3);
+}
+
+.review-admin-card .review-admin-stars {
+    color: #ffaf1f;
+    margin-bottom: 6px;
+}
+
+.review-admin-card .review-admin-meta {
+    color: #999;
+    font-size: 13px;
+    margin-bottom: 8px;
+}
+
+.review-admin-card .review-admin-comment {
+    color: #eee;
+    margin-bottom: 12px;
+}
+
+.review-admin-card .review-admin-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.review-admin-card .review-admin-actions button {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.review-admin-card .btn-approve {
+    background: #4caf50;
+    color: #fff;
+}
+
+.review-admin-card .btn-unapprove {
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
+}
+
+.review-admin-card .btn-delete {
+    background: rgba(255, 80, 80, 0.2);
+    color: #ff8080;
+}
 
 /* ---------- Reset a Customer's Password (admin page) ---------- */
 .reset-password-section {

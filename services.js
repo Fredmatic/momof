@@ -246,8 +246,14 @@ checkBooking.addEventListener("click", function () {
                         </span>
                     </p>
 
+                    ${booking.status === "completed" ? renderReviewForm(booking.reference) : ""}
+
                 </div>
             `;
+
+            if (booking.status === "completed") {
+                wireUpReviewForm(booking.reference);
+            }
 
         })
 
@@ -262,3 +268,90 @@ checkBooking.addEventListener("click", function () {
         });
 
 });
+
+// ---------- Leave a review (shown once a booking is completed) ----------
+
+function renderReviewForm(reference) {
+    return `
+        <div class="review-form" id="reviewForm-${reference}">
+            <p>How was your visit? Leave a review:</p>
+
+            <div class="star-picker" data-reference="${reference}" data-rating="0">
+                ${[1, 2, 3, 4, 5].map(n => `<i class="far fa-star" data-star="${n}"></i>`).join("")}
+            </div>
+
+            <textarea class="review-comment" placeholder="Tell us about your experience (optional)" rows="3"></textarea>
+
+            <button class="submit-review-btn" data-reference="${reference}">Submit Review</button>
+
+            <p class="review-message"></p>
+        </div>
+    `;
+}
+
+function wireUpReviewForm(reference) {
+
+    const formEl = document.getElementById(`reviewForm-${reference}`);
+    if (!formEl) return;
+
+    const starPicker = formEl.querySelector(".star-picker");
+    const stars = formEl.querySelectorAll(".star-picker i");
+    const commentBox = formEl.querySelector(".review-comment");
+    const submitBtn = formEl.querySelector(".submit-review-btn");
+    const messageEl = formEl.querySelector(".review-message");
+
+    stars.forEach(star => {
+        star.addEventListener("click", function () {
+
+            const rating = Number(star.dataset.star);
+            starPicker.dataset.rating = rating;
+
+            stars.forEach(s => {
+                const filled = Number(s.dataset.star) <= rating;
+                s.classList.toggle("fas", filled);
+                s.classList.toggle("far", !filled);
+            });
+
+        });
+    });
+
+    submitBtn.addEventListener("click", function () {
+
+        const rating = Number(starPicker.dataset.rating);
+
+        if (!rating) {
+            messageEl.textContent = "Please pick a star rating first.";
+            return;
+        }
+
+        messageEl.textContent = "Submitting...";
+
+        fetch("/reviews", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                reference,
+                rating,
+                comment: commentBox.value.trim()
+            })
+        })
+            .then(response => response.json().then(data => ({ ok: response.ok, data })))
+            .then(({ ok, data }) => {
+
+                messageEl.textContent = data.message;
+
+                if (ok) {
+                    starPicker.style.pointerEvents = "none";
+                    commentBox.disabled = true;
+                    submitBtn.disabled = true;
+                    submitBtn.style.display = "none";
+                }
+
+            })
+            .catch(() => {
+                messageEl.textContent = "Something went wrong. Please try again.";
+            });
+
+    });
+
+}

@@ -134,7 +134,7 @@
                 <input type="number" id="productPrice" placeholder="Price (UGX)" min="0" required>
 
                 <label class="photo-upload-label">
-                    Product photo (optional)
+                    Product photo (optional, max 3MB)
                     <input type="file" id="productImageFile" accept="image/*">
                 </label>
 
@@ -153,6 +153,13 @@
             <p id="productMessage"></p>
 
             <div id="productsAdminList"></div>
+        </section>
+
+        <section class="reviews-section">
+            <h1>Manage Reviews</h1>
+            <p>Approve reviews to show them on the home page. Pending ones are hidden from customers until approved.</p>
+
+            <div id="reviewsAdminList"></div>
         </section>
 
         <section class="customer-history">
