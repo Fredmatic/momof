@@ -16,9 +16,9 @@ services:
         sync: false
       - key: CLIENT_ORIGIN
         sync: false
-      - key: FLW_SECRET_KEY
+      - key: PAYMENT_MTN_NUMBER
         sync: false
-      - key: FLW_WEBHOOK_HASH
+      - key: PAYMENT_AIRTEL_NUMBER
         sync: false
-      - key: PUBLIC_URL
+      - key: PAYMENT_ACCOUNT_NAME
         sync: false

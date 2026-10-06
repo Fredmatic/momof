@@ -110,7 +110,7 @@
 
                 <div class="payment-options" id="paymentOptions" style="display: none;">
 
-                    <p class="payment-title">Pay now to secure your booking</p>
+                    <p class="payment-title">Pay a deposit to secure your booking</p>
 
                     <label class="pay-option">
                         <input type="radio" name="payPercent" value="50" checked>
@@ -136,8 +136,16 @@
                         </span>
                     </label>
 
+                    <div class="payment-instructions" id="paymentInstructions"></div>
+
+                    <select id="paymentMethod" aria-label="Which mobile money did you use?"></select>
+
+                    <input type="text" id="paymentTxnId" placeholder="Transaction ID from the confirmation SMS"
+                        maxlength="30" autocomplete="off">
+
                     <p class="payment-note">
-                        You'll pay securely with card or mobile money. Any balance is paid at the salon.
+                        Send the money first, then enter the transaction ID from the SMS you receive.
+                        We check every payment before confirming your booking. Any balance is paid at the salon.
                     </p>
 
                 </div>

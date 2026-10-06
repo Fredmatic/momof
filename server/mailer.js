@@ -88,10 +88,23 @@ function ugx(amount) {
     return "UGX " + Number(amount).toLocaleString("en-US");
 }
 
-// Payment lines are only shown for bookings that were paid for online.
+// Payment lines are only shown for bookings that came with a deposit.
 function paymentSummaryHtml(booking) {
 
-    if (!booking.total_amount || !Number(booking.amount_paid)) {
+    if (!booking.total_amount) {
+        return "";
+    }
+
+    // Customer says they paid, but nobody has checked yet.
+    if (booking.payment_status === "claimed") {
+        return `
+            <p><strong>Total price:</strong> ${ugx(booking.total_amount)}</p>
+            <p><strong>Deposit claimed:</strong> ${ugx(booking.amount_due)} via ${esc(booking.payment_method)}
+            (transaction ID ${esc(booking.payment_transaction_id)}) -- waiting to be confirmed</p>
+        `;
+    }
+
+    if (!Number(booking.amount_paid)) {
         return "";
     }
 
@@ -99,7 +112,7 @@ function paymentSummaryHtml(booking) {
 
     return `
         <p><strong>Total price:</strong> ${ugx(booking.total_amount)}</p>
-        <p><strong>Paid online:</strong> ${ugx(booking.amount_paid)}</p>
+        <p><strong>Deposit received:</strong> ${ugx(booking.amount_paid)}</p>
         <p><strong>${balance > 0 ? "Balance to pay at the salon" : "Balance"}:</strong> ${balance > 0 ? ugx(balance) : "None -- fully paid"}</p>
     `;
 }
@@ -123,7 +136,7 @@ async function sendBookingReceivedEmail(booking) {
         subject: `We've received your booking - ${String(booking.reference).replace(/[\r\n]/g, "")}`,
         html: `
             <h2>Thanks, ${esc(booking.name)}!</h2>
-            <p>Your booking at MOMO's PALOR has been received${Number(booking.amount_paid) ? ", your payment went through," : ""} and is <strong>pending confirmation</strong>.</p>
+            <p>Your booking at MOMO's PALOR has been received${booking.payment_status === "claimed" ? " (we'll confirm your deposit shortly)" : ""} and is <strong>pending confirmation</strong>.</p>
             ${bookingSummaryHtml(booking)}
             <p>We'll email you again as soon as it's confirmed.</p>
         `
@@ -179,6 +192,36 @@ async function sendBookingStatusEmail(booking) {
     });
 }
 
+// Sent when an admin confirms the deposit really arrived.
+async function sendPaymentConfirmedEmail(booking) {
+
+    await send({
+        to: booking.email,
+        subject: `Deposit received - ${String(booking.reference).replace(/[\r\n]/g, "")}`,
+        html: `
+            <h2>Deposit received</h2>
+            <p>Thank you! We've received your deposit of <strong>${ugx(booking.amount_paid)}</strong> at MOMO's PALOR.</p>
+            ${bookingSummaryHtml(booking)}
+        `
+    });
+}
+
+// Sent when an admin could not find the payment the customer reported.
+async function sendPaymentRejectedEmail(booking) {
+
+    await send({
+        to: booking.email,
+        subject: `We couldn't find your payment - ${String(booking.reference).replace(/[\r\n]/g, "")}`,
+        html: `
+            <h2>We couldn't confirm your payment</h2>
+            <p>We couldn't find a payment matching transaction ID <strong>${esc(booking.payment_transaction_id)}</strong>,
+            so your booking has been cancelled. If you did send the money, please contact us with your booking
+            reference and we'll sort it out.</p>
+            ${bookingSummaryHtml(booking)}
+        `
+    });
+}
+
 // Sent when a customer requests a password reset.
 async function sendPasswordResetEmail({ email, username, resetLink }) {
     await send({
@@ -197,5 +240,7 @@ module.exports = {
     sendBookingReceivedEmail,
     sendAdminNewBookingEmail,
     sendBookingStatusEmail,
+    sendPaymentConfirmedEmail,
+    sendPaymentRejectedEmail,
     sendPasswordResetEmail
 };

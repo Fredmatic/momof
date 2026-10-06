@@ -55,22 +55,63 @@ function formatUGX(amount) {
 
 
 
-// Online payment summary for a booking card. Empty for bookings that were
-// not paid for online.
+// Deposit summary for a booking card. Empty for bookings that came without
+// a deposit. When a customer has claimed a payment, it shows the details
+// to check against your mobile money records, plus the two buttons.
 function adminPaymentLine(booking) {
 
     const total = Number(booking.total_amount);
+
+    if (!total) return "";
+
+    if (booking.payment_status === "claimed" && booking.status !== "cancelled") {
+        return `
+            <div class="payment-claim">
+                <p><strong>Deposit to check:</strong> UGX ${Number(booking.amount_due).toLocaleString("en-US")}
+                (${escapeHtml(booking.payment_percent)}% of UGX ${total.toLocaleString("en-US")})</p>
+                <p>Paid with: ${escapeHtml(booking.payment_method)}</p>
+                <p>Transaction ID: <strong>${escapeHtml(booking.payment_transaction_id)}</strong></p>
+                <p class="payment-claim-hint">Find this in your mobile money messages, then:</p>
+                <div class="payment-claim-actions">
+                    <button type="button" class="payment-received-btn">Payment received</button>
+                    <button type="button" class="payment-rejected-btn">Not received</button>
+                </div>
+            </div>
+        `;
+    }
+
+    if (booking.payment_status === "rejected") {
+        return `<p>Deposit: <strong>not received</strong> (booking cancelled)</p>`;
+    }
+
     const paid = Number(booking.amount_paid || 0);
 
-    if (!total || !paid) return "";
+    if (!paid) return "";
 
     const balance = Math.max(0, total - paid);
 
-    return `<p>Paid online: UGX ${paid.toLocaleString("en-US")} ` +
+    return `<p>Deposit received: UGX ${paid.toLocaleString("en-US")} ` +
         (balance > 0
             ? `(balance to collect: UGX ${balance.toLocaleString("en-US")})`
             : `(fully paid)`) +
         `</p>`;
+}
+
+// Tells the server what the admin found, then refreshes the list.
+function sendPaymentDecision(reference, decision) {
+
+    fetch(`/bookings/${encodeURIComponent(reference)}/payment`, {
+        method: "PATCH",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(decision)
+    })
+        .then(response => response.json().then(data => ({ ok: response.ok, data })))
+        .then(({ ok, data }) => {
+            if (!ok) alert(data.message || "Could not update the payment.");
+            loadBookings();
+        })
+        .catch(() => alert("Could not reach the server. Please try again."));
 }
 
 function showBookings(bookings) {
@@ -114,6 +155,41 @@ function showBookings(bookings) {
         const completeButton = bookingCard.querySelector(".complete-btn");
         const cancelButton = bookingCard.querySelector(".cancel-btn");
         const bookingStatus = bookingCard.querySelector(".booking-status");
+
+        // Deposit buttons (only present when a deposit is waiting to be checked)
+        const paymentReceivedButton = bookingCard.querySelector(".payment-received-btn");
+        const paymentRejectedButton = bookingCard.querySelector(".payment-rejected-btn");
+
+        if (paymentReceivedButton) {
+
+            paymentReceivedButton.addEventListener("click", function () {
+
+                const answer = prompt(
+                    "How much did you actually receive? (UGX)",
+                    String(booking.amount_due)
+                );
+
+                if (answer === null) return;
+
+                const amount = Number(String(answer).replace(/[,\s]/g, ""));
+
+                if (!Number.isInteger(amount) || amount < 1) {
+                    alert("Please enter a valid amount, for example 40000.");
+                    return;
+                }
+
+                sendPaymentDecision(booking.reference, { action: "received", amount });
+            });
+
+            paymentRejectedButton.addEventListener("click", function () {
+
+                if (!confirm("Mark this deposit as NOT received? The booking will be cancelled and the customer will be emailed.")) {
+                    return;
+                }
+
+                sendPaymentDecision(booking.reference, { action: "rejected" });
+            });
+        }
 
 
         // Disable buttons if booking is already processed

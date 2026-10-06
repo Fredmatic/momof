@@ -5,35 +5,66 @@ const closeBooking = document.getElementById("closeBooking")
 const selectedService = document.getElementById("selectedService")
 const serviceButtons = document.querySelectorAll(".service-card button")
 
-// ---------- Online payment options ----------
-// The server says whether payments are switched on. If not, the booking
-// form works exactly as it always did.
+// ---------- Deposit options (manual mobile money) ----------
+// The server says whether deposits are switched on and which numbers to pay
+// to. If not, the booking form works exactly as it always did.
 let paymentsEnabled = false;
+let paymentConfig = null;
 const paymentOptions = document.getElementById("paymentOptions");
+const paymentInstructions = document.getElementById("paymentInstructions");
+const paymentMethodSelect = document.getElementById("paymentMethod");
+const paymentTxnId = document.getElementById("paymentTxnId");
 const bookingSubmit = document.getElementById("bookingSubmit");
-const customerEmailInput = document.getElementById("customerEmail");
 
 fetch("/api/payments/config")
     .then(response => response.json())
     .then(config => {
         paymentsEnabled = Boolean(config.enabled);
+        paymentConfig = config;
 
         if (paymentsEnabled) {
-            paymentOptions.style.display = "block";
-            bookingSubmit.textContent = "Continue to Payment";
-            customerEmailInput.required = true;
-            customerEmailInput.placeholder = "Email (for your payment receipt)";
+            paymentOptions.style.display = "flex";
+
+            paymentMethodSelect.innerHTML = config.methods
+                .map(method => `<option value="${escapeHtml(method.id)}">I paid with ${escapeHtml(method.label)}</option>`)
+                .join("");
+
+            updatePaymentAmounts();
         }
     })
-    .catch(() => { /* leave payments off if the server can't say */ });
+    .catch(() => { /* leave deposits off if the server can't say */ });
 
-// Shows what each choice costs for the service that was clicked.
+function chosenPercent() {
+    const chosen = document.querySelector('input[name="payPercent"]:checked');
+    return chosen ? Number(chosen.value) : 50;
+}
+
+// Shows what each choice costs, and exactly where to send the money.
 function updatePaymentAmounts() {
+
+    if (!paymentsEnabled) return;
+
     [50, 75, 100].forEach(percent => {
         const el = document.getElementById("payAmount" + percent);
-        el.textContent = "Pay UGX " + Math.round(Number(selectedServicePrice) * percent / 100).toLocaleString("en-US") + " now";
+        el.textContent = "Send UGX " + Math.round(Number(selectedServicePrice || 0) * percent / 100).toLocaleString("en-US");
     });
+
+    const amount = Math.round(Number(selectedServicePrice || 0) * chosenPercent() / 100);
+
+    const lines = paymentConfig.methods.map(method =>
+        `<li>${escapeHtml(method.label)}: <strong>${escapeHtml(method.number)}</strong></li>`
+    ).join("");
+
+    paymentInstructions.innerHTML = `
+        <p>Send <strong>UGX ${amount.toLocaleString("en-US")}</strong> to:</p>
+        <ul>${lines}</ul>
+        ${paymentConfig.accountName ? `<p>Name on the account: <strong>${escapeHtml(paymentConfig.accountName)}</strong></p>` : ""}
+    `;
 }
+
+document.querySelectorAll('input[name="payPercent"]').forEach(radio => {
+    radio.addEventListener("change", updatePaymentAmounts);
+});
 
 serviceButtons.forEach(button => {
     button.addEventListener("click", function () {
@@ -193,8 +224,18 @@ bookingForm.addEventListener("submit", function (event) {
     }
 
     if (paymentsEnabled) {
-        const chosen = document.querySelector('input[name="payPercent"]:checked');
-        formData.append("payment_percent", chosen ? chosen.value : "50");
+
+        const txnId = paymentTxnId.value.replace(/[\s-]/g, "");
+
+        if (!/^[A-Za-z0-9]{6,20}$/.test(txnId)) {
+            alert("Please send your deposit first, then enter the transaction ID from the confirmation SMS.");
+            return;
+        }
+
+        formData.append("payment_percent", String(chosenPercent()));
+        formData.append("payment_method", paymentMethodSelect.value);
+        formData.append("payment_txn_id", txnId);
+
         bookingSubmit.disabled = true;
         bookingSubmit.textContent = "Please wait...";
     }
@@ -220,12 +261,6 @@ bookingForm.addEventListener("submit", function (event) {
 
             console.log(data);
 
-            // Payments on: the slot is now held, so go and pay.
-            if (data.paymentLink) {
-                window.location.href = data.paymentLink;
-                return;
-            }
-
             bookingConfirmation.style.display = "block";
             bookingForm.style.display = "none";
 
@@ -233,8 +268,12 @@ bookingForm.addEventListener("submit", function (event) {
                 "Booking Reference: <strong>" + escapeHtml(bookingReference) + "</strong><br>" +
                 "Service: " + escapeHtml(selectedServiceName) + "<br>" +
                 "Price: UGX " + escapeHtml(selectedServicePrice) + "<br>" +
-                "Date: " + bookingDate + "<br>" +
-                "Time: " + bookingTime + "<br>" +
+                (paymentsEnabled
+                    ? "Deposit: UGX " + Math.round(Number(selectedServicePrice) * chosenPercent() / 100).toLocaleString("en-US") +
+                      " (we'll confirm it shortly)<br>"
+                    : "") +
+                "Date: " + escapeHtml(bookingDate) + "<br>" +
+                "Time: " + escapeHtml(bookingTime) + "<br>" +
                 "Name: " + escapeHtml(customerName) + "<br>" +
                 "Phone: " + escapeHtml(customerPhone) +
                 (customerEmail ? "<br>Email: " + escapeHtml(customerEmail) : "");
@@ -244,10 +283,8 @@ bookingForm.addEventListener("submit", function (event) {
             alert(error.message);
             loadTimeSlots(); // someone may have just taken that slot
 
-            if (paymentsEnabled) {
-                bookingSubmit.disabled = false;
-                bookingSubmit.textContent = "Continue to Payment";
-            }
+            bookingSubmit.disabled = false;
+            bookingSubmit.textContent = "Confirm Booking";
         });
 });
 
@@ -304,16 +341,11 @@ checkBooking.addEventListener("click", function () {
 
                     ${paymentInfoHtml(booking)}
 
-                    ${booking.status === "awaiting_payment" ? payNowHtml(booking.total_amount) : ""}
-
                     ${booking.status === "completed" ? renderReviewForm(booking.reference) : ""}
 
                 </div>
             `;
 
-            if (booking.status === "awaiting_payment") {
-                wirePayNow(bookingResult, booking.reference);
-            }
 
             if (booking.status === "completed") {
                 wireUpReviewForm(booking.reference);

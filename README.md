@@ -127,32 +127,32 @@ and lists which environment variables to fill in.
 - After making changes: commit and push to GitHub (step 6) — Render
   automatically redeploys on every push to your connected branch.
 
-## Online payments (Flutterwave)
+## Deposits (mobile money)
 
-Customers pay a **deposit of 50% or more** (50%, 75%) or the **full price** when they book, by card or mobile money, on Flutterwave's secure page. Whatever is left is paid at the salon. This is optional: with no `FLW_SECRET_KEY` set, bookings work exactly as before.
+Customers pay a **deposit of 50% or more** (50%, 75%) or the **full price** when they book. This is optional: with no payment numbers set, bookings work exactly as before.
 
-**How it works:** the customer fills in the booking form, the slot is held for 30 minutes, and they are sent to Flutterwave to pay. When the payment is confirmed, the booking appears in your admin dashboard as *pending* (with "Paid online" and the balance to collect), and the confirmation emails go out. Bookings that were never paid never reach your dashboard, and their slot opens up again after 30 minutes.
+**How it works:** the booking page shows your MTN / Airtel number and the amount to send. The customer sends the money, then enters the **transaction ID** from their confirmation SMS. The booking appears in your admin page with a **"Deposit to check"** box showing the amount, the network and the transaction ID. You look for that transaction in your own mobile money messages (or statement) and press:
+
+- **Payment received**: you type the amount that actually arrived (it's pre-filled with what the customer claimed). The customer gets a "Deposit received" email, and the card shows the balance to collect at the salon.
+- **Not received**: the booking is cancelled and the customer is emailed, asking them to get in touch if they really did pay.
+
+Nothing is automatic, so please check the messages for every booking before you press the green button. Each transaction ID can only be used for one booking, and one visitor can create at most 30 bookings an hour.
 
 ### One-time setup
 
 1. **Database:** in Supabase -> SQL Editor, run the contents of `supabase/add-payments.sql` once.
-2. **Flutterwave account:** sign up at flutterwave.com and open Settings -> API keys. Start with the **test** secret key (`FLWSECK_TEST-...`).
-3. **Environment variables** (in `.env` locally, and in Render -> Environment):
-   - `FLW_SECRET_KEY` = your Flutterwave secret key
-   - `FLW_WEBHOOK_HASH` = any long random text you make up
-   - `PUBLIC_URL` = your site address, e.g. `https://momos-palor.onrender.com` (needed on Render; optional locally)
-4. **Webhook:** in Flutterwave -> Settings -> Webhooks, set the URL to `https://YOUR-SITE/payments/webhook` and the **Secret hash** to the same text as `FLW_WEBHOOK_HASH`. This makes sure a payment is recorded even if the customer closes their browser before returning to your site.
-5. **Payment methods:** in Flutterwave's dashboard, make sure card and Uganda mobile money are enabled. (Or set `FLW_PAYMENT_OPTIONS=card,mobilemoneyuganda`.)
-6. Restart the server, make a test booking using Flutterwave's test cards / test mobile-money numbers, and confirm it shows up in the admin dashboard.
-7. When happy, swap in your **live** secret key and redeploy.
+2. **Your numbers** (in `.env` locally, and in Render -> Environment):
+   - `PAYMENT_MTN_NUMBER` and/or `PAYMENT_AIRTEL_NUMBER`: the numbers customers send money to
+   - `PAYMENT_ACCOUNT_NAME`: the name registered on those numbers
+3. Restart the server, make a test booking, and check that it appears in the admin page with the deposit box.
 
 ### Things to know
 
-- **Prices live in two places.** The booking page shows prices from `services.html`, but the server uses its own list (`SERVICE_PRICES` near the top of the payment section in `server/index.js`) so customers can't change what they pay. If you add a service or change a price, update both.
-- The minimum upfront share (50%) is `MIN_PERCENT` in `server/payments.js`. To offer other choices (e.g. 60%), add them to the radio buttons in `services.html` and to `PAY_PERCENT_CHOICES` in `payment-ui.js`.
-- Customers must give an email address when payments are on (Flutterwave requires one, and it is where the receipt goes).
-- Refunds are done from the Flutterwave dashboard; cancelling a booking in the admin page does not refund automatically.
-- If a customer pays after their 30-minute hold expired and someone else booked the slot meanwhile, the payment is still recorded and the server log shows a `DOUBLE BOOKING` warning so you can sort it out.
+- **Prices live in two places.** The booking page shows prices from `services.html`, but the server uses its own list (`SERVICE_PRICES` near the top of the deposit section in `server/index.js`) so customers can't change what they owe. If you add a service or change a price, update both.
+- The minimum upfront share (50%) is `MIN_PERCENT` in `server/payments.js`. To offer other choices (e.g. 60%), add them to the radio buttons in `services.html`.
+- Emails (receipts, "deposit received") only go out if the email settings above are filled in and the customer gave an email address.
+- Refunds are done from your mobile money account; cancelling a booking in the admin page does not send money back.
+- **Adding Pesapal later** (automatic payments): the deposit amounts, the 50% rule, the admin payment lines and the emails all stay; only the "customer types a transaction ID" step is replaced by Pesapal's checkout page, which confirms payments automatically.
 
 ## Notes / things to know
 

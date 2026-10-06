@@ -10,9 +10,8 @@ const rateLimit = require("express-rate-limit");
 const bcrypt = require("bcrypt");
 const multer = require("multer");
 const supabase = require("./supabaseClient");
-const crypto = require("crypto");
 const payments = require("./payments");
-const { sendBookingReceivedEmail, sendAdminNewBookingEmail, sendBookingStatusEmail } = require("./mailer");
+const { sendBookingReceivedEmail, sendAdminNewBookingEmail, sendBookingStatusEmail, sendPaymentConfirmedEmail, sendPaymentRejectedEmail } = require("./mailer");
 
 // Accepts one uploaded image file at a time, kept in memory just long
 // enough to hand off to Supabase Storage (never written to disk).
@@ -173,11 +172,12 @@ app.get("/api/status", (req, res) => {
     res.send("MOMO's PALOR server is running!");
 });
 
-// ---------- Online payments (Flutterwave) ----------
+// ---------- Deposits (manual mobile money) ----------
 
-// Prices are decided HERE, never taken from the browser, so nobody can pay
-// UGX 1 for an UGX 80,000 service by editing the page. If you add or change
-// a service (or its price) in services.html, update this list to match.
+// Prices are decided HERE, never taken from the browser, so nobody can claim
+// to have paid a UGX 1 deposit on an UGX 80,000 service by editing the page.
+// If you add or change a service (or its price) in services.html, update this
+// list to match.
 const SERVICE_PRICES = {
     "Hair-styling": 50000,
     "Nail Care": 30000,
@@ -185,20 +185,9 @@ const SERVICE_PRICES = {
     "Skin Care": 40000
 };
 
-// A booking that is waiting for payment holds its time slot for this long.
-// After that the slot opens up again for other customers.
-const PAYMENT_HOLD_MS = 30 * 60 * 1000;
-
-// Is this booking currently blocking its time slot?
+// Cancelled bookings free their time slot; everything else holds it.
 function slotIsTaken(booking) {
-
-    if (booking.status === "cancelled") return false;
-
-    if (booking.status === "awaiting_payment") {
-        return Date.now() - new Date(booking.created_at).getTime() < PAYMENT_HOLD_MS;
-    }
-
-    return true;
+    return booking.status !== "cancelled";
 }
 
 // Returns the percentage as a whole number if it is allowed (50-100), else null.
@@ -208,183 +197,26 @@ function validatePercent(value) {
     return ok ? percent : null;
 }
 
-// Where Flutterwave sends the customer after paying. Set PUBLIC_URL if the
-// site is reachable at a different address than the one the server sees.
-function publicBaseUrl(req) {
-    return (process.env.PUBLIC_URL || `${req.protocol}://${req.get("host")}`).replace(/\/$/, "");
-}
-
-// tx_ref looks like "MP-12345-lq3x9a": the booking reference plus a suffix.
-function referenceFromTxRef(txRef) {
-    return String(txRef).slice(0, String(txRef).lastIndexOf("-"));
-}
-
-// Only these fields are ever sent back to the payment-result page.
-function publicPaymentView(booking) {
-    return {
-        reference: booking.reference,
-        service: booking.service,
-        date: booking.date,
-        time: booking.time,
-        total_amount: Number(booking.total_amount),
-        amount_paid: Number(booking.amount_paid || 0),
-        payment_status: booking.payment_status
-    };
-}
-
-// Creates a fresh Flutterwave payment page for a booking and returns its URL.
-async function startPayment(req, booking, percent) {
-
-    const total = Number(booking.total_amount);
-    const amountDue = Math.round(total * percent / 100);
-    const txRef = `${booking.reference}-${Date.now().toString(36)}`;
-
-    // created_at is refreshed so the 30-minute slot hold restarts.
-    const { error } = await supabase
-        .from("bookings")
-        .update({
-            payment_percent: percent,
-            amount_due: amountDue,
-            payment_tx_ref: txRef,
-            created_at: new Date().toISOString()
-        })
-        .eq("id", booking.id);
-
-    if (error) throw error;
-
-    return payments.createPaymentLink({
-        txRef,
-        amount: amountDue,
-        redirectUrl: `${publicBaseUrl(req)}/payment-result.html`,
-        customer: { email: booking.email, name: booking.name, phone: booking.phone },
-        description: `${booking.service} - ${percent === 100 ? "full payment" : percent + "% deposit"} (${booking.reference})`,
-        reference: booking.reference
-    });
-}
-
-// The one place a payment is accepted. Called both when the customer comes
-// back from Flutterwave and when Flutterwave's webhook arrives, so it must
-// be safe to run twice for the same payment. It asks Flutterwave directly
-// whether the money really arrived before marking anything as paid.
-//
-// Returns { state, booking } where state is one of:
-// "paid", "partial", "pending", "failed", "cancelled", "not_found".
-async function settlePayment(txRef, transactionId) {
-
-    const { data: booking, error } = await supabase
-        .from("bookings")
-        .select("*")
-        .eq("reference", referenceFromTxRef(txRef))
-        .maybeSingle();
-
-    if (error) throw error;
-
-    if (!booking || !booking.total_amount) {
-        return { state: "not_found" };
-    }
-
-    // Already settled (e.g. the webhook got here first).
-    if (booking.payment_status !== "unpaid") {
-        return { state: booking.payment_status, booking };
-    }
-
-    // The customer closed or cancelled the Flutterwave page.
-    if (!transactionId) {
-        return { state: "cancelled", booking };
-    }
-
-    const tx = await payments.verifyTransaction(transactionId);
-
-    if (tx.tx_ref !== txRef || tx.currency !== payments.CURRENCY) {
-        console.warn("Payment mismatch for", txRef, "-- tx_ref or currency differs.");
-        return { state: "failed", booking };
-    }
-
-    if (tx.status === "pending") {
-        return { state: "pending", booking };
-    }
-
-    const minimum = Math.round(Number(booking.total_amount) * payments.MIN_PERCENT / 100);
-
-    if (tx.status !== "successful" || Number(tx.amount) < minimum) {
-        console.warn("Payment not accepted for", txRef, "-- status:", tx.status, "amount:", tx.amount);
-        return { state: "failed", booking };
-    }
-
-    const amountPaid = Number(tx.amount);
-
-    // "payment_status = unpaid" in the filter makes this a one-time switch:
-    // if two requests race, only one of them actually updates the row.
-    const { data: updated, error: updateError } = await supabase
-        .from("bookings")
-        .update({
-            amount_paid: amountPaid,
-            payment_status: amountPaid >= Number(booking.total_amount) ? "paid" : "partial",
-            payment_transaction_id: String(tx.id || transactionId),
-            status: "pending"
-        })
-        .eq("id", booking.id)
-        .eq("payment_status", "unpaid")
-        .select()
-        .maybeSingle();
-
-    if (updateError) throw updateError;
-
-    if (!updated) {
-        const { data: latest } = await supabase
-            .from("bookings")
-            .select("*")
-            .eq("id", booking.id)
-            .maybeSingle();
-
-        return { state: latest ? latest.payment_status : "failed", booking: latest || booking };
-    }
-
-    // If the 30-minute hold ran out and someone else took the slot while
-    // this customer was paying, keep the money on record and flag it.
-    const { data: others } = await supabase
-        .from("bookings")
-        .select("id, status, created_at")
-        .eq("service", updated.service)
-        .eq("date", updated.date)
-        .eq("time", updated.time)
-        .neq("id", updated.id);
-
-    if ((others || []).some(slotIsTaken)) {
-        console.warn(`DOUBLE BOOKING: ${updated.reference} was paid for a slot that is also booked by someone else. Please resolve it manually.`);
-    }
-
-    console.log(`Payment received for ${updated.reference}: UGX ${amountPaid} (${updated.payment_status})`);
-
-    // Fire-and-forget, same as before: emails never block the response.
-    sendBookingReceivedEmail(updated);
-    sendAdminNewBookingEmail(updated);
-
-    return { state: updated.payment_status, booking: updated };
-}
-
-// Limits calls that hit Flutterwave on a visitor's behalf.
-const paymentLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000,
-    limit: 40,
+// Limits how many bookings one visitor can create, so nobody can fill your
+// calendar with fake bookings.
+const bookingLimiter = rateLimit({
+    windowMs: 60 * 60 * 1000,
+    limit: 30,
     standardHeaders: true,
     legacyHeaders: false,
-    message: { message: "Too many payment requests. Please try again in a few minutes." }
+    message: { message: "Too many bookings from this connection. Please try again later." }
 });
 
-// The booking page asks this to decide whether to show the payment options.
+// The booking page asks this to decide whether to show the deposit options,
+// and which numbers to show.
 app.get("/api/payments/config", (req, res) => {
-    res.json({
-        enabled: payments.isEnabled(),
-        minPercent: payments.MIN_PERCENT,
-        currency: payments.CURRENCY
-    });
+    res.json(payments.publicConfig());
 });
 
-app.post("/bookings", upload.single("photo"), async (req, res) => {
+app.post("/bookings", bookingLimiter, upload.single("photo"), async (req, res) => {
 
     const booking = req.body;
-    const paymentsOn = payments.isEnabled();
+    const depositsOn = payments.isEnabled();
 
     // References end up in web addresses and on the admin page, so only the
     // expected shape is accepted (e.g. MP-K7Q3XD9H, or old ones like MP-12345).
@@ -394,8 +226,11 @@ app.post("/bookings", upload.single("photo"), async (req, res) => {
 
     let totalAmount = null;
     let percent = null;
+    let amountDue = null;
+    let method = null;
+    let transactionId = null;
 
-    if (paymentsOn) {
+    if (depositsOn) {
 
         totalAmount = SERVICE_PRICES[booking.service];
 
@@ -407,18 +242,45 @@ app.post("/bookings", upload.single("photo"), async (req, res) => {
 
         if (!percent) {
             return res.status(400).json({
-                message: `Please pay at least ${payments.MIN_PERCENT}% of the price upfront.`
+                message: `Please pay at least ${payments.MIN_PERCENT}% of the price as a deposit.`
             });
         }
 
-        if (!booking.email) {
+        method = String(booking.payment_method || "").toUpperCase();
+
+        if (!payments.methods().some(m => m.id === method)) {
+            return res.status(400).json({ message: "Please choose how you paid (MTN or Airtel)." });
+        }
+
+        transactionId = payments.normalizeTransactionId(booking.payment_txn_id);
+
+        if (!transactionId) {
             return res.status(400).json({
-                message: "An email address is required so we can send your payment receipt."
+                message: "Please enter the transaction ID from your payment confirmation SMS."
             });
         }
+
+        amountDue = Math.round(totalAmount * percent / 100);
     }
 
     try {
+
+        if (depositsOn) {
+
+            // A transaction ID can only pay for one booking.
+            const { data: used, error: usedError } = await supabase
+                .from("bookings")
+                .select("id")
+                .eq("payment_transaction_id", transactionId);
+
+            if (usedError) throw usedError;
+
+            if (used.length > 0) {
+                return res.status(409).json({
+                    message: "That transaction ID has already been used for another booking."
+                });
+            }
+        }
 
         const { data: sameSlot, error: findError } = await supabase
             .from("bookings")
@@ -443,21 +305,27 @@ app.post("/bookings", upload.single("photo"), async (req, res) => {
         const row = {
             reference: booking.reference,
             service: booking.service,
-            price: paymentsOn ? String(totalAmount) : booking.price,
+            price: depositsOn ? String(totalAmount) : booking.price,
             date: booking.date,
             time: booking.time,
             name: booking.name,
             phone: booking.phone,
             email: booking.email || null,
             photo_url: photoUrl,
-            status: paymentsOn ? "awaiting_payment" : (booking.status || "pending"),
+            status: depositsOn ? "pending" : (booking.status || "pending"),
             username: req.session.user ? req.session.user.username : null
         };
 
-        if (paymentsOn) {
+        if (depositsOn) {
             row.total_amount = totalAmount;
-            row.payment_status = "unpaid";
+            row.payment_percent = percent;
+            row.amount_due = amountDue;
             row.amount_paid = 0;
+            // "claimed" = the customer says they paid; it stays unconfirmed
+            // until an admin checks the mobile money records.
+            row.payment_status = "claimed";
+            row.payment_method = method;
+            row.payment_transaction_id = transactionId;
         }
 
         const { data: inserted, error: insertError } = await supabase
@@ -468,43 +336,25 @@ app.post("/bookings", upload.single("photo"), async (req, res) => {
 
         if (insertError) throw insertError;
 
-        if (!paymentsOn) {
-            console.log("New booking received:", booking.reference);
-
-            res.json({
-                message: "Booking received successfully"
-            });
-
-            // Fire-and-forget: emails never block or fail the booking response.
-            sendBookingReceivedEmail(booking);
-            sendAdminNewBookingEmail(booking);
-            return;
-        }
-
-        // Payments are on: hold the slot, then send the customer to pay.
-        // The "booking received" emails go out once the payment is confirmed.
-        let paymentLink;
-
-        try {
-            paymentLink = await startPayment(req, inserted, percent);
-        } catch (paymentError) {
-            // Couldn't reach Flutterwave: undo the booking so the slot isn't held for nothing.
-            await supabase.from("bookings").delete().eq("id", inserted.id);
-            console.error("Could not start payment:", paymentError.message);
-            return res.status(502).json({
-                message: "We couldn't start the payment right now. Please try again in a moment."
-            });
-        }
-
-        console.log("Booking awaiting payment:", booking.reference);
+        console.log("New booking received:", booking.reference);
 
         res.json({
-            message: "Booking held. Redirecting to payment.",
-            reference: booking.reference,
-            paymentLink
+            message: "Booking received successfully"
         });
 
+        // Fire-and-forget: emails never block or fail the booking response.
+        sendBookingReceivedEmail(inserted);
+        sendAdminNewBookingEmail(inserted);
+
     } catch (error) {
+
+        // Two customers submitting the same transaction ID at the same moment
+        if (error.code === "23505" && /txn|transaction/i.test(error.message || "")) {
+            return res.status(409).json({
+                message: "That transaction ID has already been used for another booking."
+            });
+        }
+
         console.error("Error creating booking:", error.message);
         res.status(500).json({
             message: "Something went wrong while creating the booking."
@@ -513,20 +363,16 @@ app.post("/bookings", upload.single("photo"), async (req, res) => {
 
 });
 
-// Customer gave up or closed the payment page: let them try again for the
-// same booking (while its slot is still free) instead of filling the form in again.
-app.post("/bookings/:reference/pay", paymentLimiter, async (req, res) => {
+// Admin checks their mobile money records, then confirms or rejects the
+// payment the customer claimed.
+//   { action: "received", amount: 40000 }  -> amount is what actually arrived
+//   { action: "rejected" }                 -> payment never arrived; booking is cancelled
+app.patch("/bookings/:reference/payment", requireAdmin, async (req, res) => {
 
-    if (!payments.isEnabled()) {
-        return res.status(503).json({ message: "Online payments are not available right now." });
-    }
+    const action = req.body.action;
 
-    const percent = validatePercent(req.body.percent);
-
-    if (!percent) {
-        return res.status(400).json({
-            message: `Please pay at least ${payments.MIN_PERCENT}% of the price upfront.`
-        });
+    if (action !== "received" && action !== "rejected") {
+        return res.status(400).json({ message: "Unknown action." });
     }
 
     try {
@@ -534,111 +380,68 @@ app.post("/bookings/:reference/pay", paymentLimiter, async (req, res) => {
         const { data: booking, error } = await supabase
             .from("bookings")
             .select("*")
-            .eq("reference", req.params.reference.toUpperCase())
+            .eq("reference", req.params.reference)
             .maybeSingle();
 
         if (error) throw error;
 
         if (!booking) {
-            return res.status(404).json({ message: "Booking not found." });
+            return res.status(404).json({ message: "Booking not found" });
         }
 
-        if (booking.payment_status !== "unpaid" || booking.status !== "awaiting_payment") {
-            return res.status(409).json({ message: "This booking doesn't need a payment." });
+        if (booking.payment_status !== "claimed") {
+            return res.status(409).json({ message: "This booking has no payment waiting to be checked." });
         }
 
-        const { data: others, error: slotError } = await supabase
+        let changes;
+
+        if (action === "received") {
+
+            const total = Number(booking.total_amount);
+            const amount = Number(req.body.amount === undefined ? booking.amount_due : req.body.amount);
+
+            if (!Number.isInteger(amount) || amount < 1 || amount > total) {
+                return res.status(400).json({
+                    message: `The amount must be a whole number between 1 and ${total}.`
+                });
+            }
+
+            changes = {
+                amount_paid: amount,
+                payment_status: amount >= total ? "paid" : "partial"
+            };
+
+        } else {
+            changes = { payment_status: "rejected", status: "cancelled" };
+        }
+
+        // "payment_status = claimed" in the filter makes this a one-time
+        // switch, so a double click can't record the payment twice.
+        const { data: updated, error: updateError } = await supabase
             .from("bookings")
-            .select("id, status, created_at")
-            .eq("service", booking.service)
-            .eq("date", booking.date)
-            .eq("time", booking.time)
-            .neq("id", booking.id);
+            .update(changes)
+            .eq("id", booking.id)
+            .eq("payment_status", "claimed")
+            .select()
+            .maybeSingle();
 
-        if (slotError) throw slotError;
+        if (updateError) throw updateError;
 
-        if (others.some(slotIsTaken)) {
-            return res.status(409).json({
-                message: "Sorry, that time slot was taken while your payment was pending. Please book again."
-            });
+        if (!updated) {
+            return res.status(409).json({ message: "This payment was already checked." });
         }
 
-        const paymentLink = await startPayment(req, booking, percent);
+        res.json({ message: "Payment updated", booking: updated });
 
-        res.json({ paymentLink });
-
-    } catch (error) {
-        console.error("Error restarting payment:", error.message);
-        res.status(500).json({ message: "We couldn't start the payment. Please try again." });
-    }
-
-});
-
-// Flutterwave sends the customer back here (via payment-result.html) with
-// ?status=...&tx_ref=...&transaction_id=.... Those values come from the
-// URL, so they are never trusted: settlePayment() re-checks with Flutterwave.
-app.get("/payments/verify", paymentLimiter, async (req, res) => {
-
-    const { tx_ref: txRef, transaction_id: transactionId, status } = req.query;
-
-    if (!txRef) {
-        return res.status(400).json({ message: "Missing payment reference." });
-    }
-
-    try {
-
-        const result = await settlePayment(
-            txRef,
-            status === "cancelled" ? null : transactionId
-        );
-
-        if (result.state === "not_found") {
-            return res.status(404).json({ message: "We couldn't find that payment." });
+        if (action === "received") {
+            sendPaymentConfirmedEmail(updated);
+        } else {
+            sendPaymentRejectedEmail(updated);
         }
 
-        res.json({
-            state: result.state,
-            booking: publicPaymentView(result.booking)
-        });
-
     } catch (error) {
-        console.error("Error verifying payment:", error.message);
-        res.status(500).json({ message: "We couldn't confirm your payment yet. If you were charged, don't worry -- we'll still receive it." });
-    }
-
-});
-
-// Flutterwave also calls this directly, so a payment is recorded even if the
-// customer closes their browser before returning to the site. Set the same
-// secret value as FLW_WEBHOOK_HASH here and in the Flutterwave dashboard.
-app.post("/payments/webhook", async (req, res) => {
-
-    const expected = process.env.FLW_WEBHOOK_HASH || "";
-    const received = String(req.headers["verif-hash"] || "");
-
-    const matches =
-        expected.length > 0 &&
-        expected.length === received.length &&
-        crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(received));
-
-    if (!matches) {
-        return res.sendStatus(401);
-    }
-
-    const event = req.body || {};
-    const data = event.data || {};
-
-    // Anything other than a successful charge needs no action.
-    if (event.event !== "charge.completed" || data.status !== "successful" || !data.tx_ref || !data.id) {
-        return res.sendStatus(200);
-    }
-
-    try {
-        await settlePayment(data.tx_ref, data.id);
-        res.sendStatus(200);
-    } catch (error) {
-        console.error("Webhook processing failed:", error.message);
-        res.sendStatus(500); // Flutterwave will retry later
+        console.error("Error updating payment:", error.message);
+        res.status(500).json({ message: "Could not update the payment." });
     }
 
 });
@@ -646,12 +449,9 @@ app.post("/payments/webhook", async (req, res) => {
 // Admin-only: full bookings list for the dashboard.
 app.get("/bookings", requireAdmin, async (req, res) => {
 
-    // Bookings still waiting for their first payment aren't real bookings
-    // yet, so they stay out of the dashboard until the money arrives.
     const { data, error } = await supabase
         .from("bookings")
         .select("*")
-        .neq("status", "awaiting_payment")
         .order("created_at", { ascending: false });
 
     if (error) {
@@ -683,7 +483,7 @@ app.get("/bookings/status/:reference", lookupLimiter, async (req, res) => {
 
     const { data, error } = await supabase
         .from("bookings")
-        .select("reference, service, date, time, price, status, total_amount, amount_paid, payment_status")
+        .select("reference, service, date, time, price, status, total_amount, amount_due, amount_paid, payment_status")
         .eq("reference", req.params.reference.toUpperCase())
         .maybeSingle();
 

@@ -12,6 +12,11 @@ create table if not exists users (
     created_at timestamptz not null default now()
 );
 
+-- A transaction ID can only ever pay for one booking.
+create unique index if not exists bookings_payment_txn_unique
+    on bookings (payment_transaction_id)
+    where payment_transaction_id is not null;
+
 create table if not exists bookings (
     id uuid primary key default gen_random_uuid (),
     reference text unique not null,
@@ -25,14 +30,14 @@ create table if not exists bookings (
     photo_url text, -- customer's optional reference photo (style they want)
     status text not null default 'pending',
     username text,
-    -- Online payment (Flutterwave). Amounts are in UGX.
+    -- Deposits (see supabase/add-payments.sql). Amounts are in UGX.
     total_amount numeric(12, 0), -- full price, set by the server
     payment_percent integer, -- share the customer chose to pay now (50-100)
-    amount_due numeric(12, 0), -- amount requested in the latest payment attempt
-    amount_paid numeric(12, 0) not null default 0, -- what has actually been received
-    payment_status text not null default 'unpaid', -- unpaid | partial | paid
-    payment_tx_ref text, -- latest Flutterwave transaction reference
-    payment_transaction_id text, -- Flutterwave's id for the successful payment
+    amount_due numeric(12, 0), -- deposit the customer says they sent
+    amount_paid numeric(12, 0) not null default 0, -- what you confirmed you received
+    payment_status text not null default 'unpaid', -- unpaid | claimed | partial | paid | rejected
+    payment_method text, -- MTN or AIRTEL
+    payment_transaction_id text, -- mobile money transaction ID from the customer's SMS
     created_at timestamptz not null default now()
 );
 
@@ -41,7 +46,7 @@ create table if not exists bookings (
 -- alter table bookings add column if not exists photo_url text;
 
 -- ALREADY HAVE A bookings TABLE? Run supabase/add-payments.sql once to add the
--- online-payment columns above without touching your existing data.
+-- deposit columns above without touching your existing data.
 
 create table if not exists products (
     id uuid primary key default gen_random_uuid (),
