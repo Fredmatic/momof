@@ -168,3 +168,5 @@ Customers pay a **deposit of 50% or more** (50%, 75%) or the **full price** when
   database) — ask if you'd like help adding that.
 - Do not commit your real `.env` file or `node_modules/` — both are
   already excluded via `.gitignore`.
+- **Adding new pages or features? Escape what customers type.** Names, phone numbers, review comments and so on must be wrapped in `escapeHtml(...)` (from `escape.js`) whenever they're placed into `innerHTML` or a template string; otherwise a visitor could inject their own script into your pages. Using `element.textContent = value` is also safe. Emails do the same with `esc(...)` in `server/mailer.js`.
+- Booking references look like `MP-K7Q3XD9H`. The public "Check your booking" lookup only shows the service, date, time, status and payment summary (never names, phone numbers or emails) and is rate-limited.

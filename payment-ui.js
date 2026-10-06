@@ -10,8 +10,9 @@ function ugx(amount) {
 }
 
 // "awaiting_payment" -> "awaiting payment"
+// Escaped, because it is placed straight into HTML.
 function prettyStatus(status) {
-    return String(status || "pending").replace(/_/g, " ");
+    return escapeHtml(String(status || "pending").replace(/_/g, " "));
 }
 
 // What was paid and what's left. Returns "" for bookings that were not

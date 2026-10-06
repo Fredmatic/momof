@@ -72,6 +72,18 @@ async function send({ to, subject, html }) {
     }
 }
 
+// Visitors choose their own name, phone number, etc., so anything that goes
+// into an email's HTML must be escaped (otherwise someone could inject
+// links or markup into the emails you and your customers receive).
+function esc(value) {
+    return String(value ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+}
+
 function ugx(amount) {
     return "UGX " + Number(amount).toLocaleString("en-US");
 }
@@ -94,12 +106,12 @@ function paymentSummaryHtml(booking) {
 
 function bookingSummaryHtml(booking) {
     return `
-        <p><strong>Reference:</strong> ${booking.reference}</p>
-        <p><strong>Service:</strong> ${booking.service}</p>
-        <p><strong>Date:</strong> ${booking.date}</p>
-        <p><strong>Time:</strong> ${booking.time}</p>
-        <p><strong>Name:</strong> ${booking.name}</p>
-        <p><strong>Phone:</strong> ${booking.phone}</p>
+        <p><strong>Reference:</strong> ${esc(booking.reference)}</p>
+        <p><strong>Service:</strong> ${esc(booking.service)}</p>
+        <p><strong>Date:</strong> ${esc(booking.date)}</p>
+        <p><strong>Time:</strong> ${esc(booking.time)}</p>
+        <p><strong>Name:</strong> ${esc(booking.name)}</p>
+        <p><strong>Phone:</strong> ${esc(booking.phone)}</p>
         ${paymentSummaryHtml(booking)}
     `;
 }
@@ -108,9 +120,9 @@ function bookingSummaryHtml(booking) {
 async function sendBookingReceivedEmail(booking) {
     await send({
         to: booking.email,
-        subject: `We've received your booking - ${booking.reference}`,
+        subject: `We've received your booking - ${String(booking.reference).replace(/[\r\n]/g, "")}`,
         html: `
-            <h2>Thanks, ${booking.name}!</h2>
+            <h2>Thanks, ${esc(booking.name)}!</h2>
             <p>Your booking at MOMO's PALOR has been received${Number(booking.amount_paid) ? ", your payment went through," : ""} and is <strong>pending confirmation</strong>.</p>
             ${bookingSummaryHtml(booking)}
             <p>We'll email you again as soon as it's confirmed.</p>
@@ -122,7 +134,7 @@ async function sendBookingReceivedEmail(booking) {
 async function sendAdminNewBookingEmail(booking) {
     await send({
         to: ADMIN_EMAIL,
-        subject: `New booking - ${booking.reference}`,
+        subject: `New booking - ${String(booking.reference).replace(/[\r\n]/g, "")}`,
         html: `
             <h2>New booking received</h2>
             ${bookingSummaryHtml(booking)}
@@ -174,8 +186,8 @@ async function sendPasswordResetEmail({ email, username, resetLink }) {
         subject: "Reset your MOMO's PALOR password",
         html: `
             <h2>Password reset requested</h2>
-            <p>Hi ${username}, we received a request to reset your password.</p>
-            <p><a href="${resetLink}">Click here to choose a new password</a></p>
+            <p>Hi ${esc(username)}, we received a request to reset your password.</p>
+            <p><a href="${esc(resetLink)}">Click here to choose a new password</a></p>
             <p>This link expires in 1 hour. If you didn't request this, you can safely ignore this email.</p>
         `
     });

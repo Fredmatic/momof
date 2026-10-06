@@ -386,6 +386,12 @@ app.post("/bookings", upload.single("photo"), async (req, res) => {
     const booking = req.body;
     const paymentsOn = payments.isEnabled();
 
+    // References end up in web addresses and on the admin page, so only the
+    // expected shape is accepted (e.g. MP-K7Q3XD9H, or old ones like MP-12345).
+    if (!/^MP-[A-Z0-9]{5,12}$/.test(String(booking.reference || ""))) {
+        return res.status(400).json({ message: "Invalid booking reference." });
+    }
+
     let totalAmount = null;
     let percent = null;
 
@@ -661,11 +667,23 @@ app.get("/bookings", requireAdmin, async (req, res) => {
 // "check your booking status" box on the services page). This intentionally
 // does NOT require login, but only ever returns the one matching booking,
 // never the full list.
-app.get("/bookings/status/:reference", async (req, res) => {
+// Because anyone can call this, it only returns what a customer needs to
+// see about their booking -- never the name, phone number, email or photo,
+// so a guessed reference reveals nothing personal. It is also rate-limited
+// to make guessing references impractical.
+const lookupLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    limit: 30,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { message: "Too many lookups. Please try again in a few minutes." }
+});
+
+app.get("/bookings/status/:reference", lookupLimiter, async (req, res) => {
 
     const { data, error } = await supabase
         .from("bookings")
-        .select("*")
+        .select("reference, service, date, time, price, status, total_amount, amount_paid, payment_status")
         .eq("reference", req.params.reference.toUpperCase())
         .maybeSingle();
 

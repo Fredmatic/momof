@@ -84,21 +84,21 @@ function showBookings(bookings) {
         bookingCard.classList.add("booking-card");
 
         bookingCard.innerHTML = `
-            <h3>${booking.service}</h3>
-            <p>Reference: ${booking.reference}</p>
-            <p>Price: UGX ${booking.price}</p>
+            <h3>${escapeHtml(booking.service)}</h3>
+            <p>Reference: ${escapeHtml(booking.reference)}</p>
+            <p>Price: UGX ${escapeHtml(booking.price)}</p>
             ${adminPaymentLine(booking)}
-            <p>Date: ${booking.date}</p>
-            <p>Time: ${booking.time}</p>
-            <p>Customer: ${booking.name}</p>
-            <p>Phone: ${booking.phone}</p>
-            ${booking.email ? `<p>Email: ${booking.email}</p>` : ""}
-            ${booking.photo_url ? `<p>Reference photo: <a href="${booking.photo_url}" target="_blank" rel="noopener"><img src="${booking.photo_url}" alt="Customer's reference photo" class="booking-photo-thumb"></a></p>` : ""}
+            <p>Date: ${escapeHtml(booking.date)}</p>
+            <p>Time: ${escapeHtml(booking.time)}</p>
+            <p>Customer: ${escapeHtml(booking.name)}</p>
+            <p>Phone: ${escapeHtml(booking.phone)}</p>
+            ${booking.email ? `<p>Email: ${escapeHtml(booking.email)}</p>` : ""}
+            ${booking.photo_url ? `<p>Reference photo: <a href="${escapeHtml(booking.photo_url)}" target="_blank" rel="noopener"><img src="${escapeHtml(booking.photo_url)}" alt="Customer's reference photo" class="booking-photo-thumb"></a></p>` : ""}
 
             <p>
                 Status:
-                <span class="booking-status ${booking.status || "pending"}">
-                    ${booking.status || "pending"}
+                <span class="booking-status ${escapeHtml(booking.status || "pending")}">
+                    ${escapeHtml(booking.status || "pending")}
                 </span>
             </p>
 
@@ -136,7 +136,7 @@ function showBookings(bookings) {
         // CONFIRM BOOKING
         confirmButton.addEventListener("click", function () {
 
-            fetch(`/bookings/${booking.reference}`, {
+            fetch(`/bookings/${encodeURIComponent(booking.reference)}`, {
                 method: "PATCH",
                 credentials: "include",
 
@@ -170,7 +170,7 @@ function showBookings(bookings) {
         // COMPLETE BOOKING
         completeButton.addEventListener("click", function () {
 
-            fetch(`/bookings/${booking.reference}`, {
+            fetch(`/bookings/${encodeURIComponent(booking.reference)}`, {
                 method: "PATCH",
                 credentials: "include",
 
@@ -207,7 +207,7 @@ function showBookings(bookings) {
         // CANCEL BOOKING
         cancelButton.addEventListener("click", function () {
 
-            fetch(`/bookings/${booking.reference}`, {
+            fetch(`/bookings/${encodeURIComponent(booking.reference)}`, {
                 method: "PATCH",
                 credentials: "include",
 
@@ -278,8 +278,8 @@ function showCustomers(bookings) {
         customerCard.classList.add("customer-card");
 
         customerCard.innerHTML = `
-        <h3>${customer.name}</h3>
-        <p>Phone: ${customer.phone}</p>
+        <h3>${escapeHtml(customer.name)}</h3>
+        <p>Phone: ${escapeHtml(customer.phone)}</p>
         <p>Bookings: ${customer.bookings}</p>
         <button class="view-history-btn">View History</button>
         `;
@@ -326,17 +326,17 @@ function showCustomerHistory(bookings) {
         historyCard.classList.add("booking-card");
 
         historyCard.innerHTML = `
-            <h3>${booking.service}</h3>
+            <h3>${escapeHtml(booking.service)}</h3>
 
-            <p>Reference: ${booking.reference}</p>
-            <p>Date: ${booking.date}</p>
-            <p>Time: ${booking.time}</p>
-            <p>Price: UGX ${booking.price}</p>
+            <p>Reference: ${escapeHtml(booking.reference)}</p>
+            <p>Date: ${escapeHtml(booking.date)}</p>
+            <p>Time: ${escapeHtml(booking.time)}</p>
+            <p>Price: UGX ${escapeHtml(booking.price)}</p>
 
             <p>
                 Status:
-                <span class="booking-status ${booking.status || "pending"}">
-                    ${booking.status || "pending"}
+                <span class="booking-status ${escapeHtml(booking.status || "pending")}">
+                    ${escapeHtml(booking.status || "pending")}
                 </span>
             </p>
         `;
@@ -569,17 +569,17 @@ function startProductManager() {
 
                     return `
                         <div class="product-admin-card">
-                            <img src="${imageSrc}" alt="${product.name}">
+                            <img src="${escapeHtml(imageSrc)}" alt="${escapeHtml(product.name)}">
                             <div class="product-admin-info">
-                                <h4>${product.name} -- UGX ${Number(product.price).toLocaleString("en-UG")}</h4>
+                                <h4>${escapeHtml(product.name)} -- UGX ${Number(product.price).toLocaleString("en-UG")}</h4>
                                 <p>${product.in_stock ? "In stock" : "Out of stock"}</p>
                             </div>
                             <div class="product-admin-actions">
-                                <button class="btn-edit" data-id="${product.id}">Edit</button>
-                                <button class="btn-toggle" data-id="${product.id}" data-instock="${product.in_stock}">
+                                <button class="btn-edit" data-id="${escapeHtml(product.id)}">Edit</button>
+                                <button class="btn-toggle" data-id="${escapeHtml(product.id)}" data-instock="${product.in_stock}">
                                     ${product.in_stock ? "Mark Out of Stock" : "Mark In Stock"}
                                 </button>
-                                <button class="btn-delete" data-id="${product.id}">Delete</button>
+                                <button class="btn-delete" data-id="${escapeHtml(product.id)}">Delete</button>
                             </div>
                         </div>
                     `;
@@ -739,16 +739,16 @@ function startReviewManager() {
                     <div class="review-admin-card">
                         <div class="review-admin-stars">${starsHtml(review.rating)}</div>
                         <div class="review-admin-meta">
-                            ${review.customer_name} -- booking ${review.booking_reference} --
+                            ${escapeHtml(review.customer_name)} -- booking ${escapeHtml(review.booking_reference)} --
                             ${review.approved ? "Approved" : "Pending approval"}
                         </div>
-                        ${review.comment ? `<div class="review-admin-comment">"${review.comment}"</div>` : ""}
+                        ${review.comment ? `<div class="review-admin-comment">"${escapeHtml(review.comment)}"</div>` : ""}
                         <div class="review-admin-actions">
                             ${review.approved
-                        ? `<button class="btn-unapprove" data-id="${review.id}">Unapprove</button>`
-                        : `<button class="btn-approve" data-id="${review.id}">Approve</button>`
+                        ? `<button class="btn-unapprove" data-id="${escapeHtml(review.id)}">Unapprove</button>`
+                        : `<button class="btn-approve" data-id="${escapeHtml(review.id)}">Approve</button>`
                     }
-                            <button class="btn-delete" data-id="${review.id}">Delete</button>
+                            <button class="btn-delete" data-id="${escapeHtml(review.id)}">Delete</button>
                         </div>
                     </div>
                 `).join("");

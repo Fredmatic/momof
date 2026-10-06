@@ -19,8 +19,8 @@ fetch("/reviews/approved")
         reviewsContainer.innerHTML = reviews.map(review => `
             <div class="review-card">
                 <div class="review-stars">${starsHtml(review.rating)}</div>
-                ${review.comment ? `<p class="review-comment-text">"${review.comment}"</p>` : ""}
-                <p class="review-author">-- ${review.customer_name}</p>
+                ${review.comment ? `<p class="review-comment-text">"${escapeHtml(review.comment)}"</p>` : ""}
+                <p class="review-author">-- ${escapeHtml(review.customer_name)}</p>
             </div>
         `).join("");
 

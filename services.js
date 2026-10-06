@@ -137,6 +137,15 @@ bookingDateInput.addEventListener("change", loadTimeSlots);
 
 
 
+// 8 random characters (no look-alikes such as 0/O or 1/I), e.g. "MP-K7Q3XD9H".
+// Long enough that nobody can guess another customer's reference.
+const REFERENCE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // 32 characters
+
+function makeBookingReference() {
+    const bytes = crypto.getRandomValues(new Uint8Array(8));
+    return "MP-" + Array.from(bytes, byte => REFERENCE_ALPHABET[byte % 32]).join("");
+}
+
 bookingForm.addEventListener("submit", function (event) {
     event.preventDefault()
 
@@ -166,8 +175,7 @@ bookingForm.addEventListener("submit", function (event) {
     const customerEmail = document.getElementById("customerEmail").value;
     const customerPhoto = document.getElementById("customerPhoto").files[0];
 
-    const bookingReference =
-        "MP-" + Math.floor(10000 + Math.random() * 90000);
+    const bookingReference = makeBookingReference();
 
     const formData = new FormData();
     formData.append("service", selectedServiceName);
@@ -222,14 +230,14 @@ bookingForm.addEventListener("submit", function (event) {
             bookingForm.style.display = "none";
 
             confirmationDetails.innerHTML =
-                "Booking Reference: <strong>" + bookingReference + "</strong><br>" +
-                "Service: " + selectedServiceName + "<br>" +
-                "Price: UGX " + selectedServicePrice + "<br>" +
+                "Booking Reference: <strong>" + escapeHtml(bookingReference) + "</strong><br>" +
+                "Service: " + escapeHtml(selectedServiceName) + "<br>" +
+                "Price: UGX " + escapeHtml(selectedServicePrice) + "<br>" +
                 "Date: " + bookingDate + "<br>" +
                 "Time: " + bookingTime + "<br>" +
-                "Name: " + customerName + "<br>" +
-                "Phone: " + customerPhone +
-                (customerEmail ? "<br>Email: " + customerEmail : "");
+                "Name: " + escapeHtml(customerName) + "<br>" +
+                "Phone: " + escapeHtml(customerPhone) +
+                (customerEmail ? "<br>Email: " + escapeHtml(customerEmail) : "");
 
         }).catch(error => {
             console.error("Booking failed:", error);
@@ -279,19 +287,17 @@ checkBooking.addEventListener("click", function () {
             bookingResult.innerHTML = `
                 <div class="booking-card">
 
-                    <h3>${booking.service}</h3>
+                    <h3>${escapeHtml(booking.service)}</h3>
 
-                    <p>Reference: ${booking.reference}</p>
+                    <p>Reference: ${escapeHtml(booking.reference)}</p>
 
-                    <p>Date: ${booking.date}</p>
+                    <p>Date: ${escapeHtml(booking.date)}</p>
 
-                    <p>Time: ${booking.time}</p>
-
-                    <p>Customer: ${booking.name}</p>
+                    <p>Time: ${escapeHtml(booking.time)}</p>
 
                     <p>
                         Status:
-                        <span class="booking-status ${booking.status}">
+                        <span class="booking-status ${escapeHtml(booking.status)}">
                             ${prettyStatus(booking.status)}
                         </span>
                     </p>
@@ -320,7 +326,7 @@ checkBooking.addEventListener("click", function () {
             console.error("Error:", error);
 
             bookingResult.innerHTML = `
-                <p>${error.message || "Unable to check booking. Please try again."}</p>
+                <p>${escapeHtml(error.message || "Unable to check booking. Please try again.")}</p>
             `;
 
         });
@@ -331,16 +337,16 @@ checkBooking.addEventListener("click", function () {
 
 function renderReviewForm(reference) {
     return `
-        <div class="review-form" id="reviewForm-${reference}">
+        <div class="review-form" id="reviewForm-${escapeHtml(reference)}">
             <p>How was your visit? Leave a review:</p>
 
-            <div class="star-picker" data-reference="${reference}" data-rating="0">
+            <div class="star-picker" data-reference="${escapeHtml(reference)}" data-rating="0">
                 ${[1, 2, 3, 4, 5].map(n => `<i class="far fa-star" data-star="${n}"></i>`).join("")}
             </div>
 
             <textarea class="review-comment" placeholder="Tell us about your experience (optional)" rows="3"></textarea>
 
-            <button class="submit-review-btn" data-reference="${reference}">Submit Review</button>
+            <button class="submit-review-btn" data-reference="${escapeHtml(reference)}">Submit Review</button>
 
             <p class="review-message"></p>
         </div>

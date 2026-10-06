@@ -35,9 +35,9 @@ function renderProducts(products) {
 
         return `
             <div class="service-card">
-                <img src="${imageSrc}" alt="${product.name}">
-                <h3>${product.name}</h3>
-                <p>${product.description || ""}</p>
+                <img src="${escapeHtml(imageSrc)}" alt="${escapeHtml(product.name)}">
+                <h3>${escapeHtml(product.name)}</h3>
+                <p>${escapeHtml(product.description || "")}</p>
                 <p class="product-price">${formatUGX(product.price)}</p>
                 ${actionHtml}
             </div>

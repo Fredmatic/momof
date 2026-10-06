@@ -27,17 +27,17 @@
             list.innerHTML = bookings.map(booking => `
                 <div class="booking-card">
 
-                    <h3>${booking.service}</h3>
+                    <h3>${escapeHtml(booking.service)}</h3>
 
-                    <p>Reference: ${booking.reference}</p>
+                    <p>Reference: ${escapeHtml(booking.reference)}</p>
 
-                    <p>Date: ${booking.date}</p>
+                    <p>Date: ${escapeHtml(booking.date)}</p>
 
-                    <p>Time: ${booking.time}</p>
+                    <p>Time: ${escapeHtml(booking.time)}</p>
 
                     <p>
                         Status:
-                        <span class="booking-status ${booking.status}">
+                        <span class="booking-status ${escapeHtml(booking.status)}">
                             ${prettyStatus(booking.status)}
                         </span>
                     </p>
